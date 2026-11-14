@@ -61,11 +61,14 @@ end
 
 example (a b : Point)
     (hx : a.x = b.x) (hy : a.y = b.y) (hz : a.z = b.z) : a = b := by
-  sorry
+  ext
+  exact hx
+  exact hy
+  exact hz
 
 example (a b : Point)
     (hx : a.x = b.x) (hy : a.y = b.y) (hz : a.z = b.z) : a = b := by
-  sorry
+  ext <;> assumption
 
 #check Point.ext
 #check Point.ext_iff
@@ -154,7 +157,8 @@ even in the namespace `Point` we still have to write `Point.add_comm`
 (the name is not shortened) -/
 
 protected lemma add_comm (a b : Point) : add a b = add b a := by
-  sorry
+  ext <;> simp [add, add_comm]
+
 
 #check Point.add_comm
 
@@ -168,7 +172,10 @@ instance : Add Point := ⟨add⟩
 @[simp] lemma add_z (a b : Point) : (a + b).z = a.z + b.z := by rfl
 
 example (a b : Point) : a + b = b + a := by
-  sorry
+  ext <;> simp
+  <;> rw [add_comm]
+
+
 
 end Point
 
@@ -190,9 +197,9 @@ def PosPoint.add (a b : PosPoint) : PosPoint :=
 { x := a.x + b.x
   y := a.y + b.y
   z := a.z + b.z
-  x_pos := by sorry
-  y_pos := by sorry
-  z_pos := sorry }
+  x_pos := by grw [← x_pos]; grw [← x_pos]; linarith
+  y_pos := by linarith[a.y_pos, b.y_pos]
+  z_pos := by grw[← z_pos]; grw[← z_pos]; linarith }
 
 
 
@@ -215,9 +222,9 @@ structure PosPoint' extends Point where
 
 def PosPoint'.add (a b : PosPoint') : PosPoint' where
   toPoint := a.toPoint + b.toPoint
-  x_pos := by sorry
-  y_pos := by sorry
-  z_pos := by sorry
+  x_pos := by rw [add_x]; grw [← x_pos]; grw [← x_pos]; rw [zero_add]
+  y_pos := by rw [add_y]; grw [← y_pos]; grw [← y_pos]; rw [zero_add]
+  z_pos := by rw [add_z]; grw [← z_pos]; grw [← z_pos]; rw [zero_add]
 
 
 
@@ -306,8 +313,13 @@ Lean *might* be able to figure out `left_inv` and `right_inv` itself.
 `Bool` has two elements, `true` and `false`
 -/
 
-example : PosPoint ≃ PosReal × PosReal × PosReal := by
-  sorry
+example : PosPoint ≃ PosReal × PosReal × PosReal where
+  toFun P := (⟨P.x, P.x_pos⟩, ⟨P.y, P.y_pos⟩, ⟨P.z, P.z_pos⟩)
+  invFun := sorry
+  left_inv := sorry
+  right_inv := sorry
+
+
 
 example {α : Type*} : (Unit → α) ≃ (α → Unit) × α := by
   sorry
@@ -343,7 +355,7 @@ def IntGroup : AbelianGroup where
 
 lemma AbelianGroup.zero_add (g : AbelianGroup) (x : g.G) :
     g.add g.zero x = x := by
-  sorry
+  rw[g.comm, g.add_zero]
 
 
 
@@ -380,7 +392,7 @@ instance : AbelianGroup' ℤ where
   zero := 0
   add_zero := by simp
   neg := fun a ↦ -a
-  add_neg := by exact?
+  add_neg := by exact fun x ↦ Int.add_right_neg x
 
 #eval AbelianGroup'.add (2 : ℤ) 5
 

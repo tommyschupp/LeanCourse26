@@ -20,40 +20,101 @@ open Real Function Set Nat
 /-! # Exercises to practice. -/
 
 example (p q r s : Prop) (h : p ∧ q → r) (hp : p) (h' : q → s) : q → r ∧ s := by
-  sorry
+  intro hq
+  constructor
+  · apply h
+    constructor
+    apply hp
+    apply hq
+  · specialize h' hq
+    assumption
+
 
 example {α : Type*} {p q : α → Prop} (h : ∀ x, p x → q x) :
     (∃ x, p x) → (∃ x, q x) := by
-  sorry
+  intro hx
+  obtain ⟨x₀ , hx₀ ⟩ := hx
+  specialize h x₀ hx₀
+  exact ⟨x₀, h ⟩
 
 -- Exercise: prove this by contraposition.
 example : 2 ≠ 4 → 1 ≠ 2 := by
-  sorry
+  intro h
+  linarith
 
 /- Prove the following with basic tactics,
 in particular without using `tauto`, `grind` or lemmas from Mathlib. -/
 example {α : Type*} {p : α → Prop} {r : Prop} :
     ((∃ x, p x) → r) ↔ (∀ x, p x → r) := by
-  sorry
+  constructor
+  · intro hxr hx hpx
+    specialize hxr ⟨hx, hpx⟩
+    assumption
+  · intro hax hx
+    obtain ⟨x₀ , hx₀ ⟩ := hx
+    specialize hax x₀ hx₀
+    assumption
+
+
 
 
 /- Prove the following with basic tactics,
 in particular without using `tauto`, `grind` or lemmas from Mathlib. -/
 example {α : Type*} {p : α → Prop} {r : Prop} :
     (∃ x, p x ∧ r) ↔ ((∃ x, p x) ∧ r) := by
-  sorry
-
+  constructor
+  · intro hx
+    constructor
+    · obtain ⟨y , hy ⟩ := hx
+      exact ⟨y, hy.1⟩
+    · obtain ⟨y , hy ⟩ := hx
+      exact hy.2
+  · intro hx
+    obtain ⟨y , hr ⟩ := hx
+    obtain ⟨z, hz ⟩ := y
+    use z
 
 /- Prove the following without using `push_neg` or lemmas from Mathlib.
 You will need to use `by_contra` in the proof. -/
 example {α : Type*} (p : α → Prop) : (∃ x, p x) ↔ (¬ ∀ x, ¬ p x) := by
-  sorry
+  constructor
+  · intro hx hnx
+    obtain ⟨y, hy ⟩ := hx
+    specialize hnx y
+    contradiction
+  · contrapose
+    intro nx y hz
+    apply nx
+    use y
+
+
+
+
+
+
+
+
+
+
+
 
 def SequentialLimit (u : ℕ → ℝ) (l : ℝ) : Prop :=
   ∀ ε > 0, ∃ N, ∀ n ≥ N, |u n - l| < ε
 
 example (a : ℝ) : SequentialLimit (fun _ : ℕ ↦ a) a := by
-  sorry
+  unfold SequentialLimit
+  intro ε hε
+  use 0
+  intro n hn
+  have key := calc
+    |(fun x ↦ a) n - a| = |a - a| := by rfl
+    _ = |0| := by rw[sub_self]
+    _ = 0 := by exact abs_zero
+    _ < ε := by apply hε
+  assumption
+
+
+
 
 /-
 `(n)!` denotes the factorial function on the natural numbers.
@@ -62,17 +123,38 @@ Use `calc` to prove this.
 You can use `exact?` to find lemmas from the library,
 such as the fact that factorial is monotone. -/
 example (n m : ℕ) (h : n ≤ m) : (n)! ∣ (m + 1)! := by
-  sorry
+  have h' : n ≤ m+1 := by exact le_add_right_of_le h
+  exact factorial_dvd_factorial h'
+
 
 example (a b c x y : ℝ) (h : a ≤ b) (h2 : b < c) (h3 : x ≤ y) :
     a + exp x ≤ c + exp (y + 2) := by
-  sorry
+  have h' : exp x ≤ exp y := by exact exp_le_exp.mpr h3
+  have h'' : y ≤ y + 2 := by linarith
+  have h''' : rexp y ≤ rexp (y + 2) := by exact exp_le_exp.mpr h''
+  calc
+  a + rexp x ≤ b + rexp x := by linarith
+            _ ≤ c + rexp x := by linarith
+            _ ≤ c + rexp y := by linarith
+            _ ≤ c + rexp (y + 2) := by exact (add_le_add_iff_left c).mpr h'''
+
+
 
 -- Use `rw?` or `#click_suggestions` to help you in the following calculation.
 -- Alternatively, write out a calc block by hand.
+#click_suggestions
+
 example {G : Type*} [Group G] {a b c : G}
     (h : a⁻¹ * b * c * c⁻¹ * a * b⁻¹ * a * a⁻¹ = b) (h' : b * a = a * b) : b = 1 := by
-  sorry
+    rw [mul_assoc (a⁻¹ * b) c c⁻¹, mul_inv_cancel] at h
+    rw [mul_assoc a⁻¹ b 1, mul_one, mul_inv_cancel_right, mul_assoc a⁻¹ b a] at h
+    sorry
+
+
+
+
+
+
 
 /-- Prove the following using `linarith`.
 Note that `linarith` cannot deal with implication or if and only if statements. -/
@@ -131,21 +213,53 @@ def Continuous' (f : ℝ → ℝ) := ∀ x, ContinuousAtPoint f x
 -- Exercise for you. Remember that you can use `unfold` to expand a definition.
 example (f g : ℝ → ℝ) (hfg : ∀ x, ContinuousAtPoint f x ↔ ContinuousAtPoint g x) :
     Continuous' f ↔ Continuous' g := by
-  sorry
+  unfold Continuous'
+  constructor
+  · intro hf x
+    specialize hfg x
+    specialize hf x
+    apply hfg.1 hf
+  · intro hg x
+    specialize hfg x
+    specialize hg x
+    apply hfg.2 hg
+
 
 def All (p : ℝ → Prop) := ∀ x, p x
 
 example (p q : ℝ → Prop) (h : ∀ x, p x ↔ q x) :
     All p ↔ All q := by
-  sorry
+  constructor
+  · intro hp x
+    specialize h x
+    specialize hp x
+    apply h.1 hp
+  · intro hq x
+    specialize h x
+    specialize hq x
+    apply h.2 hq
 
 example (p q : ℝ → Prop) (h : ∀ x, p x ↔ q x) :
     (∃ x, p x) ↔ (∃ x, q x) := by
-  sorry
+  constructor
+  · intro hx
+    obtain ⟨x₀ , px₀ ⟩ := hx
+    specialize h x₀
+    use x₀
+    exact h.1 px₀
+  · intro hx
+    obtain ⟨x₀ , px₀ ⟩ := hx
+    specialize h x₀
+    use x₀
+    exact h.2 px₀
+
+
 
 -- Is the following true? If yes, prove it in Lean.
 -- If not, give a counterexample and prove it. (What do you have to do to do so?)
-example (p q : ℕ → Prop) (h: (∃ x, p x) ↔ (∃ x, q x)) : ∀ x, p x ↔ q x := by
+
+--Not sure how to provide a counter example. An example of such p and q are p is x = 1 and q is x = 0.
+example (p q : ℕ → Prop) (h: (∃ x, p x) ↔ (∃ x, q x)) : ¬ (∀ x, p x ↔ q x) := by
   sorry
 
 
@@ -153,7 +267,26 @@ example (p q : ℕ → Prop) (h: (∃ x, p x) ↔ (∃ x, q x)) : ∀ x, p x ↔
 /- Prove the following with basic tactics, without using `tauto` or lemmas from Mathlib. -/
 lemma exists_distributes_over_or {α : Type*} {p q : α → Prop} :
     (∃ x, p x ∨ q x) ↔ (∃ x, p x) ∨ (∃ x, q x) := by
-  sorry
+  constructor
+  · intro hx
+    obtain ⟨x₀, hx₀⟩ := hx
+    obtain hp | hq := hx₀
+    · left
+      use x₀
+    · right
+      use x₀
+  · intro ho
+    obtain hp | hq := ho
+    · obtain ⟨x₀ , hx₀⟩ := hp
+      use x₀
+      left
+      assumption
+    · obtain ⟨x₀, hx₀ ⟩ := hq
+      use x₀
+      right
+      assumption
+
+
 
 end Logic
 
@@ -172,9 +305,10 @@ section Functions
 -- Use `exact?`, `apply?` or `#click_suggestions` to find this theorem in Mathlib.
 -- Describe what you are doing.
 example (p : ℕ) [hp: Fact (Nat.Prime p)] (x : ZMod p) : x ^ p = x := by
-  sorry
+  exact ZMod.pow_card x
 
 -- The above theorem has a name. What is it?
+--Fermat's little theorem.
 -- Use this name to find the same result using leansearch.net.
 -- Describe every step you're performing.
 
@@ -191,19 +325,36 @@ example (p : ℕ) [hp: Fact (Nat.Prime p)] (x : ZMod p) : x ^ p = x := by
 
 -- Use `exact?` to find the following theorem in Mathlib.
 example (p : ℕ) [hp: Fact (Nat.Prime p)] (k : ZMod p) (hk : k ≠ 0) : k ^ (p - 1) = 1 := by
-  sorry
+  exact ZMod.pow_card_sub_one_eq_one hk
 
 -- Prove the following.
 example (p : ℕ) [Fact (Nat.Prime p)] :
     (fun x ↦ x ^ p + 2 * x ^ (2 * (p - 1) + 1) : ZMod p → ZMod p) = (fun x ↦ 3 * x) := by
-  sorry
+  ext x
+  by_cases hx : x = 0
+  · rw [hx, ZMod.pow_card, pow_succ, Semiring.mul_zero, Semiring.mul_zero 3]
+    ring
+  · rw [ZMod.pow_card, Nat.mul_sub_one, ← Nat.mul_sub_one, _root_.pow_succ', pow_mul',
+      ZMod.pow_card_sub_one_eq_one hx]
+    ring
+
 
 -- Prove the following.
 example (p : ℕ) [Fact (Nat.Prime p)] (k : ZMod p) : k ^ (3 * (p - 1) + 1) = k := by
-  sorry
+  by_cases hx : k = 0
+  · rw[hx]
+    ring
+  · rw [_root_.pow_succ', pow_mul', ZMod.pow_card_sub_one_eq_one hx]
+    ring
+
+
 
 example (p : ℕ) [Fact (Nat.Prime p)] (k : ZMod p) : k ^ (5 * (p - 1) + 1) = k := by
-  sorry
+  by_cases hx : k = 0
+  · rw[hx]
+    ring
+  · rw [_root_.pow_succ', pow_mul', ZMod.pow_card_sub_one_eq_one hx]
+    ring
 
 end Functions
 
@@ -212,17 +363,68 @@ end Functions
 lemma sequentialLimit_add {s t : ℕ → ℝ} {a b : ℝ}
       (hs : SequentialLimit s a) (ht : SequentialLimit t b) :
     SequentialLimit (fun n ↦ s n + t n) (a + b) := by
-  sorry
+  unfold SequentialLimit
+  intro ε hε
+  have he2 : ε /2 > 0 := by linarith
+  let e := ε / 2
+  specialize hs e he2
+  specialize ht e he2
+  obtain ⟨Nₛ, hNₛ ⟩:= hs
+  obtain ⟨Nₜ , hNₜ ⟩ := ht
+  let N₀ := max Nₛ Nₜ
+  use N₀
+  intro n hn
+  have nbs : n ≥ Nₛ := by exact le_of_max_le_left hn
+  have nbt : n ≥ Nₜ := by exact le_of_max_le_right hn
+  specialize hNₛ n nbs
+  specialize hNₜ n nbt
+  have key := calc
+    |(fun n ↦ s n + t n) n - (a + b)| = |s n + t n - (a + b)| := by rfl
+    _ = |(s n - a) + (t n - b)| := by ring_nf
+    _ ≤ |s n - a| + |t n - b| := by exact abs_add_le (s n - a) (t n - b)
+    _ < e + e := by linarith
+    _ = ε := by ring
+  assumption
 
 /- It may be useful to case split on whether `c = 0` is true. -/
 lemma sequentialLimit_mul_const {s : ℕ → ℝ} {a : ℝ} (c : ℝ) (hs : SequentialLimit s a) :
     SequentialLimit (fun n ↦ c * s n) (c * a) := by
-  sorry
+  by_cases hc : c = 0
+  · unfold SequentialLimit
+    rw[hc]
+    simp_rw [Semiring.zero_mul]
+    rw [sub_self, abs_zero]
+    intro ε hε
+    use 0
+    intro nx hnx
+    assumption
+  · intro ε hε
+    have h' : |c| > 0 := by exact abs_pos.mpr hc
+    have hec : ε / |c| > 0 := by exact _root_.div_pos hε h'
+    specialize hs (ε / |c|) hec
+    obtain ⟨Ns, hNs⟩ := hs
+    use Ns
+    intro n hn
+    specialize hNs n hn
+    have key := calc
+      |(fun n ↦ c * s n) n - c * a| = |c * s n - c * a| := by rfl
+      _ = |c * (s n - a)| := by rw [← mul_sub]
+      _ = |c| * |s n - a| := by rw [abs_mul]
+      _ < |c| * (ε / |c|) := by grw [hNs]
+      _ = ε := by rw [mul_div_cancel₀]
+                  exact ne_of_gt h'
+    assumption
+
+
 
 /-- Prove this using a calculation. -/
 lemma exercise_square {m n k : ℤ} (h : m ^ 2 + n ≤ 2) : n + 1 ≤ 3 + k ^ 2 := by
-  sorry
-
+  have mg0 : m ^ 2 ≥ 0 := by exact Int.sq_nonneg m
+  have hn : n ≤ 2 := by linarith
+  have hk : k ^ 2 ≥ 0 := by exact Int.sq_nonneg k
+  calc
+    n + 1 ≤ 3 := by linarith
+    _ ≤ 3 + k ^ 2 := by linarith
 
 section Growth
 
@@ -241,19 +443,54 @@ def EventuallyGrowsFaster (s t : ℕ → ℕ) : Prop :=
 /- show that `n * s n` grows (eventually) faster than `s n`. -/
 lemma eventuallyGrowsFaster_mul_left :
     EventuallyGrowsFaster (fun n ↦ n * s n) s := by
-  sorry
+  intro k
+  use k
+  intro n hn
+  simp
+  exact Nat.mul_le_mul_right (s n) hn
+
 
 /- Show that if `sᵢ` grows eventually faster than `tᵢ` then
 `s₁ + s₂` grows eventually faster than `t₁ + t₂`. -/
 lemma eventuallyGrowsFaster_add {s₁ s₂ t₁ t₂ : ℕ → ℕ}
     (h₁ : EventuallyGrowsFaster s₁ t₁) (h₂ : EventuallyGrowsFaster s₂ t₂) :
     EventuallyGrowsFaster (s₁ + s₂) (t₁ + t₂) := by
-  sorry
+  intro k
+  specialize h₁ k
+  specialize h₂ k
+  obtain ⟨ N1, hN1 ⟩ := h₁
+  obtain ⟨ N2, hN2 ⟩ := h₂
+  let N := max N1 N2
+  use N
+  intro n hn
+  have nb1 : n ≥ N1 := by exact le_of_max_le_left hn
+  have nb2 : n ≥ N2 := by exact le_of_max_le_right hn
+  specialize hN1 n nb1
+  specialize hN2 n nb2
+  calc
+    k * (t₁ + t₂) n = k * (t₁ n + t₂ n) := by simp
+                  _ = k * t₁ n + k * t₂ n := by linarith
+                  _ ≤ s₁ n + s₂ n := by linarith
+
 
 /- Find a positive function that grows faster than itself when shifted by one. -/
 lemma eventuallyGrowsFaster_shift : ∃ (s : ℕ → ℕ),
     EventuallyGrowsFaster (fun n ↦ s (n+1)) s ∧ ∀ n, s n ≠ 0 := by
-  sorry
+  let S := fun n : ℕ ↦ (n)!
+  use S
+  constructor
+  rotate_left
+  · intro x
+    exact factorial_ne_zero x
+  · intro k
+    use k
+    intro n hn
+    simp
+    unfold S
+    have hk : k ≤ n+1 := by linarith
+    calc
+      k * n ! ≤ (n+1) * (n)! := by exact Nat.mul_le_mul_right n ! hk
+            _ = (n + 1)! := by exact Eq.symm (factorial_succ n)
 
 
 

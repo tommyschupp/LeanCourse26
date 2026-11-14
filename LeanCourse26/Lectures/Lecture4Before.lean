@@ -68,7 +68,15 @@ and one branch assuming `hQ : Q`.
 #check (mul_eq_zero : a * b = 0 ↔ a = 0 ∨ b = 0)
 
 example : a = a * b → a = 0 ∨ b = 1 := by
-  sorry
+  intro h
+  have H : a * (b-1) = 0 := by linarith
+  rw[mul_eq_zero] at H
+  obtain ha | hb := H
+  · left
+    assumption
+  · right
+    linarith
+
 
 
 def Injective (f : ℝ → ℝ) : Prop := ∀ x y : ℝ, f x = f y → x = y
@@ -76,7 +84,13 @@ def Injective (f : ℝ → ℝ) : Prop := ∀ x y : ℝ, f x = f y → x = y
 #check (lt_trichotomy a b : a < b ∨ a = b ∨ b < a)
 
 example (f : ℝ → ℝ) (hf : StrictMono f) : Injective f := by
-  sorry
+  intro x y h
+  obtain hl | he | hg := lt_trichotomy x y
+  · specialize hf hl
+    linarith
+  · assumption
+  · specialize hf hg
+    linarith
 
 /- ## Negation
 The negation `¬ A` just means `A → False`,
@@ -85,22 +99,36 @@ We can use the same tactics as for implication:
 `intro` to prove a negation, and `apply` to use one. -/
 
 example {p : Prop} (h : p) : ¬ ¬ p := by
-  sorry
+  intro np
+  apply np
+  assumption
 
 example {α : Type*} {p : α → Prop} : ¬ (∃ x, p x) ↔ ∀ x, ¬ p x := by
-  sorry
+  constructor
+  · intro nx x hp
+    apply nx
+    exact ⟨x, hp ⟩
+  · intro h hn
+    obtain ⟨ x , hx ⟩ := hn
+    specialize h x
+    apply h
+    assumption
 
 /- We can use `exfalso` to use the fact that
 everything follows from `False`: ex falso quod libet -/
 example {p : Prop} (h : ¬ p) : p → 0 = 1 := by
-  sorry
+  intro hp
+  exfalso
+  apply h
+  exact hp
 
 
 
 /- `contradiction` proves any goal
 when two hypotheses are contradictory. -/
 example {p : Prop} (h : ¬ p) : p → 0 = 1 := by
-  sorry
+  intro hp
+  contradiction
 
 
 
@@ -116,17 +144,28 @@ using the following tactics.
 -/
 
 example (p : Prop) (h : ¬¬p) : p := by
-  sorry
+  by_contra hnp
+  apply h hnp
 
 example (p q : Prop) (h : ¬q → ¬p) : p → q := by
-  sorry
+  by_contra h'
+  push Not at h'
+  have g1 : ¬q := by apply h'.2
+  have g2 : p := by apply h'.1
+  specialize h g1
+  contradiction
 
 example (p r : Prop) (h1 : p → r) (h2 : ¬ p → r) : r := by
-  sorry
+  by_cases h : p
+  · specialize h1 h
+    assumption
+  · specialize h2 h
+    assumption
 
 example {α : Type*} {p : α → α → Prop} :
     ¬ (∃ x y, p x y) ↔ ∀ x y, ¬ p x y := by
-  sorry
+  push Not
+  rfl
 
 /-
 Note the difference between adding and removing a negation.
@@ -138,10 +177,13 @@ we need to use `by_contra` to begin a proof by contradiction.
 
 /- The `contrapose` tactic starts a proof by contraposition -/
 example (p q : Prop) (h : ¬q → ¬p) : p → q := by
-  sorry
+  contrapose
+  exact h
 
 example : 2 ≠ 4 → 1 ≠ 2 := by
-  sorry
+  contrapose
+  intro h
+  linarith
 
 
 /-- The sequence `u` of real numbers converges to `l`.
@@ -151,12 +193,27 @@ def SequentialLimit (u : ℕ → ℝ) (l : ℝ) : Prop :=
 
 example (u : ℕ → ℝ) (l : ℝ) : ¬ SequentialLimit u l ↔
     ∃ ε > 0, ∀ N, ∃ n ≥ N, |u n - l| ≥ ε := by
-  sorry
+  unfold SequentialLimit
+  push Not
+  rfl
 
 lemma sequentialLimit_unique (u : ℕ → ℝ) (l l' : ℝ) :
     SequentialLimit u l → SequentialLimit u l' → l = l' := by
-  sorry
-
+  intro hl hl'
+  by_contra h : l ≠ l'
+  have H : |l - l'| > 0 := by exact abs_sub_pos.mpr h
+  specialize hl (|l - l'|/2) (by exact half_pos H)
+  specialize hl' (|l - l'|/2) (by exact half_pos H)
+  obtain ⟨ N, hN ⟩ := hl
+  obtain ⟨ N', hN' ⟩ := hl'
+  let N₀ := max N N'
+  specialize hN N₀ (by exact Nat.le_max_left N N')
+  specialize hN' N₀ (by exact Nat.le_max_right N N')
+  have key := calc
+  |l - l'| = |(u N₀ - l') - (u N₀ - l)| := by ring_nf
+          _ ≤ |u N₀ - l'| + |u N₀ - l| := by exact abs_sub (u N₀ - l') (u N₀ - l)
+          _ < |l - l'| := by linarith
+  linarith
 
 /- ## Refine tactic
 The tactic `refine` behaves like `exact`, except you can leave
@@ -165,9 +222,8 @@ This is very useful for writing more compact code.
 -/
 
 example (p q r : Prop) (h : p → q) (h' : q → r) : p → p ∧ q ∧ r := by
-  sorry
-
-
+  intro hp
+  refine ⟨hp, h hp, h' (h hp)⟩
 
 /- ## Proving two functions are equal
 To prove that two functions `f g : α → β` are equal, you can prove that they are equal at every

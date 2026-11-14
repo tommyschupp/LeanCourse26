@@ -159,8 +159,24 @@ section
 
 -- In this case, you can actually derive a contradiction from a function with this property.
 -- Do so in the following exercise.
+
 lemma contradictory_definition (f : ℕ → ℕ) (h : ∀ n : ℕ, f n = 1 + f (n + 1)) : False := by
-  sorry
+  have h' (n : ℕ) : f n + n = (f 0) := by
+    induction n with
+    | zero => simp
+    | succ n hn =>
+      calc f (n + 1) + (n + 1) = (1 + f (n + 1)) + n := by linarith
+      _ = f n + n := by exact Eq.symm ((fun {m k n} ↦ Nat.add_right_cancel_iff.mpr) (h n))
+      _ = f 0 := by assumption
+
+  specialize h' ((f 0) + 1)
+  have h'' : f ((f 0) + 1) + ((f 0) + 1) > f 0 := by
+    rw [Nat.add_left_comm]
+    simp
+  rw [h'] at h''
+  apply LT.lt.false at h''
+  assumption
+
 
 
 -- Hint for the exercise `contradictory_definition`:
@@ -170,9 +186,43 @@ lemma contradictory_definition (f : ℕ → ℕ) (h : ∀ n : ℕ, f n = 1 + f (
 
 /- Prove by induction that `∑_{i = 0}^{n} i^3 = (∑_{i=0}^{n} i) ^ 2`. -/
 open Finset in
+
+lemma gaussQ (n : ℕ) : ∑ i ∈ Finset.range (n + 1), (i : ℚ) = ↑(n * (n + 1))/2 := by
+  induction n with
+  | zero => simp
+  | succ n hn =>
+    calc ∑ i ∈ Finset.range (n + 1 + 1), ↑i =
+      (∑ i ∈ Finset.range (n + 1), (i : ℚ)) + ↑(n + 1) := by exact sum_range_succ Nat.cast (n + 1)
+      _ = ↑(n * (n + 1))/2 + ↑(n + 1) := by rw [hn]
+      _ = ↑(n * (n + 1))/2 + ↑ 2 * (n + 1) / 2 := by simp
+      _ = ↑(n * (n + 1) + ↑ 2 * (n + 1)) / 2 := by rw [← add_div]; simp
+      _ = ↑((n + 2) * (n + 1)) / 2 := by ring_nf
+      _ = ↑((n + 1) * (n + 1 + 1)) / 2 := by ring_nf
+
+
+
 lemma sum_cube_eq_sq_sum (n : ℕ) :
     (∑ i ∈ Finset.range (n + 1), (i : ℚ) ^ 3) = (∑ i ∈ Finset.range (n + 1), (i : ℚ)) ^ 2 := by
-  sorry
+  induction n with
+  | zero => simp
+  | succ n hn =>
+  calc ∑ i ∈ Finset.range (n + 1 + 1), (i : ℚ)^ 3 =
+  ∑ i ∈ Finset.range (n + 1), (i : ℚ) ^ 3 + ↑(n + 1)^3 := by simp; rw [Finset.sum_range_succ]; simp
+    _ = (∑ i ∈ Finset.range (n + 1), (i : ℚ)) ^ 2 + ↑(n+1)^3 := by
+      simp; exact Rat.ext (congrArg Rat.num hn) (congrArg Rat.den hn)
+    _ = (↑ (n * (n+1)) / 2)^2 + ↑ (n+1)^3 := by rw [gaussQ n]
+    _ = (↑(n + 1) ^ 2) * (↑n / 2) ^ 2 + ↑ (n + 1) ^ 3 := by
+      simp; rw [mul_div_assoc, mul_div_left_comm]; rw [mul_pow]
+    _ = (↑(n + 1) ^ 2)*((↑n/2)^ 2 + ↑(n + 1)) := by simp; rw [Rat.mul_add]; rw [← pow_succ]
+    _ = (↑(n + 1) ^ 2)*((↑n^ 2)/4 + ↑(n + 1)) := by simp; left; rw [div_pow]; ring_nf
+    _ = (↑(n + 1) ^ 2)*((↑ n ^ 2)/4 + 4 * (n + 1)/4) := by simp
+    _ = (↑(n + 1) ^ 2)*(↑ n ^ 2 + 4 * (n + 1))/4 := by rw [← add_div]; apply mul_div
+    _ = (↑(n + 1) ^ 2)*(↑ n ^ 2 + 4 * n + 4)/4 := by simp; left; ring_nf
+    _ = (↑(n + 1) ^ 2)*(↑(n + 2) ^ 2)/(2^2) := by simp; ring_nf
+    _ = (↑(n + 1) ^ 2)*(↑(n + 2) ^ 2)/4 := by simp; ring_nf
+    _ = (↑((n + 1)* (n + 2))/2)^2 := by simp; rw [div_pow]; ring_nf
+    _ = (∑ i ∈ Finset.range (n + 1 + 1), (i : ℚ))^2 := by rw[gaussQ (n + 1)]
+
 
 end
 
@@ -196,22 +246,30 @@ def op (a b : Point4) : Point4 where
 
 -- Prove that op is associative.
 lemma op_assoc {a b c : Point4} : op (op a b) c = op a (op b c) := by
-  sorry
+  unfold op
+  ring_nf
 
 -- Investigate whether op is commutative: prove one of the following.
 lemma op_comm : ∀ a b : Point4, op a b = op b a := by
   sorry
 
 lemma not_op_comm : ¬(∀ a b : Point4, op a b = op b a) := by
-  sorry
-
+  simp
+  let a : Point4 := ⟨0, 1, 0, 0⟩
+  let b : Point4 := ⟨0, 0, 1, 0⟩
+  use a, b
+  rw [← ne_eq]
+  calc op a b = ⟨0, 0, 0, 1⟩ := by rw[op]; simp[a, b]
+    _ ≠ ⟨0, 0, 0, -1⟩ := by simp; linarith
+    _ = op b a := by rw [op]; simp[a, b]
 
 -- For the latter, you may the following helpful.
 example : ⟨0, 1, 2, 3⟩ ≠ (⟨0, 3, 2, 3⟩ : Point4) := by
-  sorry
+  simp
 
 example {x y : ℝ} (h : x ≠ y) : ⟨0, 1, x, 3⟩ ≠ (⟨0, 1, y, 3⟩ : Point4) := by
-  sorry
+  simp
+  exact Ne.symm (id (Ne.symm h))
 
 -- If you want to use one of these lemmas, prove it also.
 lemma ne_of_ne_x {a b : Point4} (h : a.x ≠ b.x) : a ≠ b := by
@@ -233,9 +291,25 @@ Then state and prove the lemma that for any element of a strict bipointed type w
 `∀ z, z ≠ x₀ ∨ z ≠ x₁.` -/
 
 -- give the definition here
+structure StrictBipointedType where
+  α : Type
+  x₀ : Point
+  x₁ : Point
+  h : x₀ ≠ x₁
 
 
 -- state and prove the lemma here
+
+lemma space_between_points {I : StrictBipointedType} : ∀ z : Point , z ≠ I.x₀ ∨ z ≠ I.x₁ := by
+  intro z
+  by_cases hz : z = I.x₀
+  · right
+    rw[hz]
+    exact I.h
+  · simp
+    left
+    assumption
+
 
 
 end Bipointed

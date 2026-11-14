@@ -44,18 +44,21 @@ that they are equal at every point, using the `ext` tactic.
 -/
 
 example {α β : Type*} {f g : α → β} (h : ∀ x, f x = g x) : f = g := by
-  sorry
+  ext x
+  apply h
 
 -- `rfl` can prove an equality `f = f`,
 example : (fun n : ℤ ↦ n + 2) = (fun n : ℤ ↦ n + 2) := rfl
 
 -- but once two functions are not "obviously" equal, you need `ext` to prove it.
 example : (fun n : ℤ ↦ n + 2) = (fun n : ℤ ↦ n + 2 + 0) := by
-  sorry
+  ext x
+  exact Eq.symm (Int.add_zero (x + 2))
 
 example : (fun n : ℤ ↦ 2 * n + 5) =
     (fun n : ℤ ↦ (n + 2) + (n + 6) - 3) := by
-  sorry
+  ext x
+  ring
 
 
 
@@ -107,19 +110,24 @@ Similar theorems are often proven together in the same file.
 
 example (a b c d : ℝ) (hb : 0 < b) :
     b ^ (a * c + d) = (b ^ c) ^ a * b ^ d := by
-  sorry
+  rw[mul_comm, rpow_add hb (c* a) d, rpow_mul]
+  exact Std.le_of_lt hb
+
 
 
 example (a b x y : ℝ) (h : a < b) (h2 : x ≤ y) :
     a + exp x < b + exp y := by
-  sorry
+  refine add_lt_add_of_lt_of_le h ?_
+  rw [exp_le_exp]
+  apply h2
 
 
 lemma cancel_addition (a b c : ℝ) (h : a + b = a + c) : b = c := by
-  sorry
+  rwa [add_right_inj] at h
 
 lemma cancel_addition' {a b c : ℝ} (h : a + b = a + c) : b = c := by
-  sorry
+  apply cancel_addition at h
+  assumption
 
 /-
 In `cancel_addition` above, the curly braces around `{a b c : ℝ}`
@@ -128,13 +136,14 @@ they don't have to be stated, but will be figured out by Lean automatically.
 -/
 
 example {b c : ℝ} (h : 2 + b = 2 + c) : b = c := by
-  sorry
+  apply cancel_addition at h
+  apply h
 
 /- {G : Type*} and [Group G] are both implicit arguments.
 The difference will be discussed later. -/
 
 example {G : Type*} [Group G] (a : G) : a * a⁻¹ = 1 := by
-  sorry
+  rw [mul_inv_cancel]
 
 
 /-
@@ -143,7 +152,7 @@ the `simp` tactic is used to *simplify* expressions.
 -/
 
 example (x : ℝ) : (3 * (x - x)) ^ 2 = 0 := by
-  sorry
+  simp only [sub_self, mul_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]
 
 
 /-
@@ -154,12 +163,18 @@ Use `#click_suggestions` or other search tools to prove the following
 
 example (a b c d : ℝ) (hb : 0 < b) (h : b ^ d = 2) :
     b ^ (c - a * d) = b ^ c / 2 ^ a := by
-  sorry
+  rw [rpow_sub hb c (a * d), mul_comm, rpow_mul]
+  rw[h]
+  exact le_of_lt hb
+
+
 
 example (a b c d : ℝ) (hb : 0 < b) (h : b ^ d = 2) :
     sinh (a + 1) + sinh (a - 1) = sinh a * (exp 1 + 1 / exp 1) := by
-  sorry
-
+  rw [sinh_add, sinh_sub]
+  simp
+  rw [← mul_two, cosh_eq, exp_neg]
+  ring
 
 
 /- # Orders -/
@@ -179,7 +194,12 @@ example (x : ℝ) : x ≤ x := by apply le_refl
 example (x : ℝ) : x ≤ x := by rfl
 
 example (h₀ : a = b) (h₁ : b < c) (h₂ : c ≤ d) (h₃ : d < e) : a < e := by
-  sorry
+  calc
+    a = b := by apply h₀
+    _ < c := by apply h₁
+    _ ≤ d := by apply h₂
+    _ < e := by apply h₃
+
 
 /-
 `order` can prove inequalities that only follow from
@@ -187,7 +207,7 @@ order-theoretic principles.
 -/
 
 example (h₀ : a = b) (h₁ : b < c) (h₂ : c ≤ d) (h₃ : d < e) : a < e := by
-  sorry
+  order
 
 /-
 `linarith` can prove inequalities (and equalities)
@@ -196,7 +216,7 @@ that follow from linear combinations of assumptions.
 
 example (x y z : ℝ) (hx : x ≤ 3 * y) (h2 : ¬ y > 2 * z)
     (h3 : x ≥ 6 * z) : x = 3 * y := by
-  sorry
+  linarith
 
 
 /- Mathlib has lemmas that all common operations are monotone.
@@ -208,25 +228,33 @@ Here are a few examples. -/
 
 example (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 ≤ c) :
     a * (b + 2) ≤ (a + c) * (b + 2) := by
-  sorry
+  have ha : a + c ≥ a := by exact le_add_of_nonneg_right h
+  have hb : 0 ≤ b + 2 := by linarith
+  calc
+    a * (b + 2) ≤ (a + c) * (b + 2) := by apply mul_le_mul_of_nonneg_right ha hb
+
+
 
 /- `gcongr` is very convenient for monotonicity of functions. -/
 
 example (h : a ≤ b) (h2 : b ≤ c) : exp a ≤ exp c := by
-  sorry
+  gcongr
+  exact Std.IsPreorder.le_trans a b c h h2
 
 example (h : a ≤ b) : c - exp b ≤ c - exp a := by
-  sorry
+  gcongr
 
 example (hac : 0 ≤ a) (hb : 0 ≤ b) (h : 0 ≤ c) :
     a * (b + 2) ≤ (a + c) * (b + 2) := by
-  sorry
+  gcongr
+  exact (le_add_iff_nonneg_right a).mpr h
 
 
 /- Remark: for equalities, you should use `congr` instead of `gcongr` -/
 
 example (h : a = b) : c - exp b = c - exp a := by
-  sorry
+  congr
+  (expose_names; exact cancel_addition a_1 b a (congrArg (HAdd.hAdd a_1) (id (Eq.symm h))))
 
 
 
@@ -253,23 +281,32 @@ example {a b n : ℤ} (h : a ≡ b [ZMOD n]) : a ^ 2 ≡ b ^ 2 [ZMOD n] := by
 
 example {a b c d n : ℤ} (h : a ≡ b [ZMOD n]) (h' : c ≡ d [ZMOD n]) :
     a ^ 2 * c ≡ b ^ 2 * d [ZMOD n] := by
-  sorry
+  grw[h, h']
 
 
 
 example (f g : ℝ → ℝ) (h : ∀ x : ℝ, f x ≤ g x)
     (h₂ : g a + g b ≤ 5) : f a + f b ≤ 5 := by
-  sorry
+  grw[h, h]
+  apply h₂
+
 
 
 example {a b c d : ℝ} (h₀ : 0 < b) (h₁ : b < a) (h₂ : c ≤ d) :
     1 / a + exp c ≤ exp d + 1 / b := by
-  sorry
+  have h3 : rexp c ≤ rexp d := by exact exp_le_exp_of_le h₂
+  grw[h3]
+  have h4 : 1 / a < 1 / b := by exact one_div_lt_one_div_of_lt h₀ h₁
+  grw[h4]
+  rw [add_comm']
+
 
 
 example {a b c : ℤ} (h₁ : a ∣ b) (h₂ : b ∣ a ^ 2 * c) :
     a ∣ b ^ 2 * c := by
-  sorry
+  grw[← h₁] at h₂
+  grw[← h₁]
+  assumption
 
 
 
@@ -363,17 +400,22 @@ There are various ways to prove the following lemmas:
 * give a direct proof: `⟨xs, xt⟩`
 -/
 example (hxs : x ∈ s) (hxt : x ∈ t) : x ∈ s ∩ t := by
-  sorry
-  done
+  simp
+  constructor
+  · assumption
+  · assumption
 
 example (hxs : x ∈ s) : x ∈ s ∪ t := by
-  sorry
-  done
+  simp
+  left
+  assumption
+
 
 
 example (hx : x ∈ s \ t) : x ∈ (s ∪ t) ∩ (sᶜ ∪ tᶜ) := by
+  simp
   sorry
-  done
+
 
 
 

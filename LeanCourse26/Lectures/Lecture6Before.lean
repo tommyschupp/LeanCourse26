@@ -112,12 +112,22 @@ There are various ways to prove the following lemmas:
 * give a direct proof: `⟨xs, xt⟩`
 -/
 example (hxs : x ∈ s) (hxt : x ∈ t) : x ∈ s ∩ t := by
-  sorry
+  simp
+  constructor
+  · assumption
+  · assumption
 
 
 
 example (hx : x ∈ s \ t) : x ∈ (s ∪ t) ∩ (sᶜ ∪ tᶜ) := by
-  sorry
+  simp
+  constructor
+  · left
+    simp at hx
+    exact hx.1
+  · right
+    simp at hx
+    exact hx.2
 
 
 
@@ -133,12 +143,21 @@ example (hx : x ∈ s \ t) : x ∈ (s ∪ t) ∩ (sᶜ ∪ tᶜ) := by
 /- in other words, it states: `s ⊆ t ↔ ∀ x, x ∈ s → x ∈ t` -/
 
 example : s ∩ t ⊆ s ∩ (t ∪ u) := by
-  sorry
+  intro x hx
+  constructor
+  · simp at hx
+    exact hx.1
+  · simp
+    left
+    simp at hx
+    exact hx.2
+
 
 /- You can also prove it at the level of sets,
 without talking about elements. -/
 example : s ∩ t ⊆ s ∩ (t ∪ u) := by
-  sorry
+  gcongr
+  exact subset_union_of_subset_left (fun ⦃a⦄ a_1 ↦ a_1) u
 
 
 
@@ -154,7 +173,8 @@ or using the `ext` tactic.
 #check (subset_antisymm : s ⊆ t → t ⊆ s → s = t)
 
 example : s ∩ t = t ∩ s := by
-  sorry
+  ext x
+  exact comm
 
 
 
@@ -173,7 +193,8 @@ def evens : Set ℕ := {n : ℕ | Even n}
 def odds : Set ℕ := {n : ℕ | Odd n}
 
 example : evensᶜ = odds := by
-  sorry
+  ext n
+  simp [evens, odds]
 
 
 
@@ -257,7 +278,18 @@ example (𝓒 : Set (Set α)) :
 
 example (C : ι → Set α) (s : Set α) :
     s ∩ (⋃ i, C i) = ⋃ i, (C i ∩ s) := by
-  sorry
+  ext x
+  constructor
+  · simp
+    intro hx l hl
+    constructor
+    · use l
+    · apply hx
+  · simp
+    intro l hl hx
+    constructor
+    · assumption
+    · use l
 
 
 
@@ -283,8 +315,13 @@ example (f : α → β) (s : Set α) : f '' s = { y : β | ∃ x ∈ s, f x = y 
 
 
 example {s : Set α} {t : Set β} {f : α → β} : f '' s ⊆ t ↔ s ⊆ f ⁻¹' t := by
-  sorry
-
+  constructor
+  · intro hs
+    simp at hs
+    assumption
+  · intro hs
+    simp
+    assumption
 
 /- We can do pointwise operations on sets (e.g. the Minkowski sum). -/
 
@@ -299,7 +336,9 @@ example (s : Set ℝ) : -s = {x : ℝ | -x ∈ s } := by rfl
 /- We can write `{a, b, c, ...}` to write enumerated sets. -/
 
 example : ({1, 3, 4} : Set ℝ) + {0, 3} = {1, 3, 4, 6, 7} := by
-  sorry
+  ext x
+  simp[mem_add]
+
 
 
 
@@ -328,7 +367,9 @@ example : Iic b   = {x | x ≤ b}         := by rfl
 example : Iio b   = {x | x < b}         := by rfl
 
 example : Icc a b ∩ Ici c = Icc (max a c) b := by
-  sorry
+  ext x
+  simp
+  tauto
 
 
 
@@ -346,7 +387,8 @@ Some useful tactics when dealing with numbers:
 example : 2 ^ 3 + 17 = 300 / 12 := by norm_num
 
 example (x : ℝ) : x + 5 + 3 = x + 8 := by
-  sorry
+  rw [add_assoc]
+  norm_num
 
 example (n m : ℤ) : 2 * n + 1 ≠ 2 * m := by lia
 
@@ -438,11 +480,11 @@ example (n : ℕ) : ((n + 1 : ℤ) : ℚ) = n + 1 := by norm_cast
 example (n m : ℕ) (h : m ∣ n) : (↑(n / m) : ℚ) = ↑n / ↑m := by norm_cast
 
 example (n m : ℕ) (h : (n : ℚ) + 1 ≤ m) : (n : ℝ) + 1 ≤ m := by
-  sorry
-  done
+  norm_cast at h
+  norm_cast
 
 example (n m : ℕ) (h : n = m * m + 2) :
     (n : ℝ) - 3 = (m + 1) * (m - 1) := by
-  sorry
-  done
-
+  rw[h]
+  push_cast
+  ring

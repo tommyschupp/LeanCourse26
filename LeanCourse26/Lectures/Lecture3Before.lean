@@ -49,7 +49,11 @@ variable (f g : ℝ → ℝ)
 #check (continuous_sin : Continuous (fun x : ℝ ↦ sin x))
 
 example : Continuous (fun x ↦ x + x * Real.sin x) := by
-  sorry
+  apply Continuous.add
+  apply continuous_id
+  apply Continuous.mul
+  apply continuous_id
+  apply continuous_sin
 
 /- # Today: logic (if and only if, for all, and, exists, or, not) -/
 
@@ -69,16 +73,20 @@ example : Continuous (fun x ↦ x + x * Real.sin x) := by
 
 
 example (h : a ≤ b) : exp a ≤ exp b := by
-  sorry
+  apply exp_le_exp.2
+  apply h
 
 
 
 example (h : exp a ≤ exp b) : a ≤ b := by
-  sorry
+  apply exp_le_exp.1
+  apply h
 
 
 example {p q : Prop} (h1 : p → q) (h2 : q → p) : p ↔ q := by
-  sorry
+  constructor
+  · apply h1
+  · apply h2
 
 
 
@@ -94,7 +102,11 @@ def Injective (f : ℝ → ℝ) : Prop := ∀ x y : ℝ, f x = f y → x = y
 
 example (f g : ℝ → ℝ) (hg : Injective g) (hf : Injective f) :
     Injective (g ∘ f) := by
-  sorry
+    intro y x e
+    apply hg at e
+    apply hf at e
+    assumption
+
 
 
 /- ## Conjunction
@@ -117,12 +129,17 @@ Furthermore, we can decompose conjunction and equivalences.
 -/
 
 example (p q r s : Prop) (h : p → r) (h' : q → s) : p ∧ q → r ∧ s := by
-  sorry
+  intro H
+  obtain ⟨hp, hq⟩ := H
+  specialize h hp
+  specialize h' hq
+  constructor
+  · assumption
+  · assumption
 
 /- Exercise: prove this. Hint: you can do this in one line. -/
 example (p q r s : Prop) (h : p ↔ r) (h' : q ↔ s) : p ∧ q ↔ r ∧ s := by
-  sorry
-
+  rw[h, h']
 
 /-- The function`f : ℝ → ℝ` is continuous at `x₀`.-/
 def ContinuousAtPoint (f : ℝ → ℝ) (x₀ : ℝ) : Prop :=
@@ -133,7 +150,17 @@ def Continuous' (f : ℝ → ℝ):= ∀ x, ContinuousAtPoint f x
 -- Exercise: prove this
 example (f g : ℝ → ℝ) (hfg : ∀ x, ContinuousAtPoint f x ↔ ContinuousAtPoint g x) :
     Continuous' f ↔ Continuous' g := by
-  sorry
+  unfold Continuous'
+  constructor
+  intro fc x
+  apply hfg at x
+  apply x.1
+  apply fc
+  intro fd y
+  apply hfg at y
+  apply y.2
+  apply fd
+
 
 
 /- ## Existential quantifiers -/
@@ -153,17 +180,29 @@ example {α : Type*} [PartialOrder α]
     (isDense : ∀ x y : α, x < y → ∃ z : α, x < z ∧ z < y)
     (x y : α) (hxy : x < y) :
     ∃ z₁ z₂ : α, x < z₁ ∧ z₁ < z₂ ∧ z₂ < y := by
-  sorry
+  have Z1 : ∃z₁ : α, x < z₁ ∧ z₁ < y := by
+    apply isDense
+    apply hxy
+  obtain ⟨z₁, hz₁⟩ := Z1
+  have Z2 : ∃z₂ : α, z₁ < z₂ ∧ z₂ < y := by
+    apply isDense
+    apply hz₁.2
+  obtain ⟨z₂, hz₂⟩ := Z2
+  use z₁, z₂
+  constructor
+  apply hz₁.1
+  constructor
+  apply hz₂.1
+  apply hz₂.2
+
 
 
 /- Lean supports shorthands for quantifiers
 followed by an infix predicate (`<`, `≥`, `∈`, ...) -/
 example (P : ℕ → Prop) : (∃ n > 3, P n) ↔ (∃ n, n > 3 ∧ P n) := by
-  sorry
-
+  rfl
 example (P : ℕ → Prop) : (∀ n ≤ 10, P n) ↔ (∀ n, n ≤ 10 → P n) := by
-  sorry
-
+  rfl
 
 /- ## Disjunctions -/
 
@@ -185,13 +224,27 @@ and one branch assuming `hQ : Q`.
 #check (mul_eq_zero : a * b = 0 ↔ a = 0 ∨ b = 0)
 
 example : a = a * b → a = 0 ∨ b = 1 := by
-  sorry
+  intro h
+  have H : a * (b-1) = 0 := by linarith
+  rw[mul_eq_zero] at H
+  obtain ha | hb := H
+  · left
+    assumption
+  · right
+    linarith
+
 
 
 #check (lt_trichotomy a b : a < b ∨ a = b ∨ b < a)
 
 example (f : ℝ → ℝ) (hf : StrictMono f) : Injective f := by
-  sorry
+  intro x y h
+  obtain hl | he | hg := lt_trichotomy x y
+  · specialize hf hl
+    linarith
+  · assumption
+  · specialize hf hg
+    linarith
 
 /- ## Negation
 
@@ -201,23 +254,38 @@ We can use the same tactics as for implication:
 `intro` to prove a negation, and `apply` to use one. -/
 
 example {p : Prop} (h : p) : ¬ ¬ p := by
-  sorry
+  intro np
+  apply np
+  assumption
 
 example {α : Type*} {p : α → Prop} : ¬ (∃ x, p x) ↔ ∀ x, ¬ p x := by
-  sorry
+  constructor
+  · intro nx x hp
+    apply nx
+    exact ⟨x, hp ⟩
+  · intro h hn
+    obtain ⟨ x , hx ⟩ := hn
+    specialize h x
+    apply h
+    assumption
+
+
 
 /- We can use `exfalso` to use the fact that
 everything follows from `False`: ex falso quod libet -/
 example {p : Prop} (h : ¬ p) : p → 0 = 1 := by
-  sorry
-
+  intro hp
+  exfalso
+  apply h
+  exact hp
 
 
 
 /- `contradiction` proves any goal
 when two hypotheses are contradictory. -/
 example {p : Prop} (h : ¬ p) : p → 0 = 1 := by
-  sorry
+  intro hp
+  contradiction
 
 
 
@@ -233,15 +301,32 @@ using the following tactics.
 * `by_cases h : p` to start a proof by cases on statement `p`.
 * `push Not` to push negations inside quantifiers and connectives.
 -/
+
+example (p : Prop) (h : ¬ ¬ p) : p := by
+  by_contra hnp
+  apply h hnp
+
 example (p q : Prop) (h : ¬q → ¬p) : p → q := by
-  sorry
+  by_contra h'
+  push Not at h'
+  have g1 : ¬q := by apply h'.2
+  have g2 : p := by apply h'.1
+  specialize h g1
+  contradiction
+
+
 
 example (p r : Prop) (h1 : p → r) (h2 : ¬ p → r) : r := by
-  sorry
+  by_cases h : p
+  · specialize h1 h
+    assumption
+  · specialize h2 h
+    assumption
 
 example {α : Type*} {p : α → α → Prop} :
     ¬ (∃ x y, p x y) ↔ ∀ x y, ¬ p x y := by
-  sorry
+  push Not
+  rfl
 
 
 
@@ -253,8 +338,11 @@ def SequentialLimit (u : ℕ → ℝ) (l : ℝ) : Prop :=
 
 example (u : ℕ → ℝ) (l : ℝ) : ¬ SequentialLimit u l ↔
     ∃ ε > 0, ∀ N, ∃ n ≥ N, |u n - l| ≥ ε := by
-  sorry
+  unfold SequentialLimit
+  push Not
+  rfl
 
 lemma sequentialLimit_unique (u : ℕ → ℝ) (l l' : ℝ) :
     SequentialLimit u l → SequentialLimit u l' → l = l' := by
+  intro ucl ucl'
   sorry

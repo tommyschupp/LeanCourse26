@@ -134,22 +134,108 @@ end Set
 /- Prove this without using lemmas from Mathlib. -/
 lemma image_and_intersection {α β : Type*} (f : α → β) (s : Set α) (t : Set β) :
     f '' s ∩ t = f '' (s ∩ f ⁻¹' t) := by
-  sorry
+  ext x
+  constructor
+  · intro hx
+    simp
+    obtain ⟨hx1, hx2 ⟩ := hx
+    simp at hx1
+    obtain ⟨x_1, hx_1⟩ := hx1
+    use x_1
+    constructor
+    · constructor
+      · apply hx_1.1
+      · grw[← hx_1.2] at hx2
+        assumption
+    · apply hx_1.2
+  · intro hx
+    simp
+    simp at hx
+    obtain ⟨x_1, hx_1⟩ := hx
+    have p1 : x_1 ∈ s := by apply hx_1.1.1
+    have p2 : f x_1 = x := by apply hx_1.2
+    constructor
+    · use x_1
+    · have p3 : f x_1 ∈ t := by apply hx_1.1.2
+      grw[p2] at p3
+      assumption
+
 
 /- Prove this without using lemmas from Mathlib. -/
 -- Note: we still use the `simp` tactic... which is using mathlib, but only in a mild way.
 -- That's a reasonable compromise for now.
 example {I : Type*} (f : α → β) (A : I → Set α) : (f '' ⋃ i, A i) = ⋃ i, f '' A i := by
-  sorry
+  ext x
+  constructor
+  · intro hx
+    simp
+    simp at hx
+    obtain ⟨x_1, hx_1, hx_2⟩ := hx
+    obtain ⟨i, hi⟩ := hx_1
+    use i, x_1
+  · intro hx
+    simp
+    simp at hx
+    obtain ⟨i, x_1, hx_2, hx_3⟩ := hx
+    use x_1
+    constructor
+    · use i
+    · assumption
 
 /- Prove this without using lemmas from Mathlib. -/
 example {a b c d : ℝ} (hab : a < b) : Icc a b ⊆ Ioo c d ↔ c < a ∧ b < d := by
-  sorry
+  unfold Icc Ioo
+  constructor
+  · intro hI
+    simp at hI
+    have key1 : a ≤ a := by linarith
+    have key2 : a ≤ b := by linarith
+    have key3 : b ≤ b := by linarith
+    have hI2 := hI
+    specialize hI a key1 key2
+    specialize hI2 b key2 key3
+    constructor
+    · exact hI.1
+    · exact hI2.2
+  · intro hI x hx
+    simp
+    simp at hx
+    constructor
+    · calc
+      c < a := by apply hI.1
+      _ ≤ x := by apply hx.1
+    · calc
+      x ≤ b := by apply hx.2
+      _ < d := by apply hI.2
+
+
+
+
+
+
+
 
 /- Prove this by finding relevant lemmas in Mathlib. -/
 lemma preimage_square :
     (fun x : ℝ ↦ x ^ 2) ⁻¹' {y | y ≥ 16} = { x : ℝ | x ≤ -4 } ∪ { x : ℝ | x ≥ 4 } := by
-  sorry
+  ext x
+  simp
+  have key : √16 = 4 := by rw [sqrt_eq_iff_mul_self_eq_of_pos]
+                           norm_num
+                           apply zero_lt_four'
+  constructor
+  · intro hx
+    apply Real.sqrt_le_sqrt at hx
+    grw[key] at hx
+    rw [sqrt_sq_eq_abs] at hx
+    exact le_abs'.mp hx
+  · intro hx
+    rw [← le_abs'] at hx
+    grw[← key] at hx
+    rwa [sqrt_le_left, sq_abs] at hx
+    apply abs_nonneg
+
+
 
 section Surjectivity
 
@@ -166,14 +252,48 @@ example : (g ∘ f) x = g (f x) := by simp
 
 lemma surjective_composition (hf : SurjectiveFunction f) :
     SurjectiveFunction (g ∘ f) ↔ SurjectiveFunction g := by
-  sorry
+    unfold SurjectiveFunction
+    simp
+    unfold SurjectiveFunction at hf
+    constructor
+    · intro hgf z
+      specialize hgf z
+      obtain ⟨x, hx⟩ := hgf
+      use f x
+    · intro hg y
+      specialize hg y
+      obtain ⟨z, hz⟩ := hg
+      specialize hf z
+      obtain ⟨x, hx⟩ := hf
+      use x
+      rw[← hx] at hz
+      exact hz
+
+
+
 
 /- When composing a surjective function by a linear function
 to the left and the right, the result will still be a
 surjective function. The `ring` tactic will be very useful here! -/
 lemma surjective_linear (hf : SurjectiveFunction f) :
     SurjectiveFunction (fun x ↦ 2 * f (3 * (x + 4)) + 1) := by
-  sorry
+  unfold SurjectiveFunction at hf
+  unfold SurjectiveFunction
+  intro y
+  let w := (y-1)/2
+  specialize hf w
+  obtain ⟨u, hu⟩ := hf
+  let v := (u/3) - 4
+  use v
+  simp
+  have key1 : 3 * (v + 4) = u := by rw [sub_add_cancel, mul_div_cancel₀]
+                                    apply three_ne_zero'
+  rw[key1]
+  rw [hu, mul_div_cancel₀, sub_add_cancel]
+  exact two_ne_zero
+
+
+
 
 /- Let's prove Cantor's theorem:
 there is no surjective function from any set to its power set.
@@ -181,7 +301,18 @@ Hint: use `let R := {x | x ∉ f x}` to consider the set `R` of elements `x`
 that are not in `f x`
 -/
 lemma exercise_cantor (α : Type*) (f : α → Set α) : ¬ Surjective f := by
-  sorry
-
+  unfold Surjective
+  intro hb
+  let R := {x | x ∉ f x}
+  specialize hb R
+  obtain ⟨a, ha⟩ := hb
+  by_cases key1 : a ∈ R
+  · have imd1 : a ∉ f a := by apply key1
+    have key2 : a ∉ R := by rw[ha] at imd1
+                            apply imd1
+    contradiction
+  · have key2 := key1
+    rw[← ha] at key2
+    rw [notMem_ofPred_iff] at key1
+    contradiction
 end Surjectivity
-

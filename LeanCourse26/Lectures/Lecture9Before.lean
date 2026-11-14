@@ -157,6 +157,7 @@ for numbers.
 
 #check fun n : ℕ ↦ (n : ℚ)
 
+
 abbrev PosReal : Type := {x : ℝ // x > 0}
 
 instance : Coe PosReal Real where

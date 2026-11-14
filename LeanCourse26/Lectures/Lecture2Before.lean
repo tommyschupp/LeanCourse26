@@ -70,18 +70,20 @@ so it has type `ℕ → Prop`. -/
 
 /- What is the type of the predicate
 stating that a real number is less than π? -/
--- #check fun x : ℝ ↦ x < π
+open Real in
+#check fun x : ℝ ↦ x < π
 
 
 /- What is the type of addition on the natural numbers? -/
--- #check fun n m : ℕ ↦ n + m
+#check fun n m : ℕ ↦ n + m
 
 
 
 /- What is the type of `≤` on the integers? -/
 -- #check fun n m : ℤ ↦ n ≤ m
 
-
+open Real in
+#check fun x: ℝ ↦ x < π
 
 
 
@@ -99,11 +101,11 @@ It can also unfold definitions. -/
 
 
 example (a b c : ℝ) : a * b + c = a * b + c := by
-  sorry
+  rfl
 
 
 example : 4! = 24 := by
-  sorry
+  rfl
 
 
 
@@ -119,11 +121,15 @@ So it can reason with `+`, `-`, `*`, and natural number exponents,
 but not with other operations (like division). -/
 
 example (a b : ℝ) : a * (a + b) = a^2 + a*b := by
-  sorry
+  ring
 
 
 example (a b c : ℝ) : (a * b) * c = b * (a * c) := by
-  sorry
+  ring
+
+example (a b c : ℕ ) : (a * b) * c = a * (b * c) := by
+  ring
+
 
 
 /- `ring` is a program that generates a Lean proof.
@@ -145,14 +151,18 @@ to ensure that Lean doesn't accept wrong proofs.
 
 example (a b c d e : ℝ) (h : a = b + c) (h' : e = d - b) :
     a + e = d + c := by
-  sorry
+  rw[h, h']
+  ring
 
 
 /- You can use `rw ... at h` to do the rewrite steps in a hypothesis. -/
 
 example (a b c d : ℝ) (h : a = b + c) (h' : b = 0) :
     a + d = d + c + b := by
-  sorry
+  rw [h']
+  rw [h'] at h
+  rw [h]
+  ring
 
 
 
@@ -160,7 +170,12 @@ example (a b c d : ℝ) (h : a = b + c) (h' : b = 0) :
 
 example (a b c : ℝ) (h : a + 1 = b) (h' : a + b = c) :
     c * 2 = a * 4 + 2 := by
-  sorry
+  symm at h'
+  rw [h']
+  symm at h
+  rw [h]
+  ring
+
 
 
 
@@ -185,9 +200,9 @@ to write your proofs as a calculation.
 
 example (a b c d : ℝ) (h : c = b*a - d) (h' : d = a*b) : c = 0 := by
   calc
-    c = b*a - d   := by sorry
-    _ = b*a - a*b := by sorry
-    _ = 0         := by sorry
+    c = b*a - d   := by rw[h]
+    _ = b*a - a*b := by rw[h']
+    _ = 0         := by ring
 
 
 
@@ -196,7 +211,9 @@ Let's write a calc-proof by hand.
 -/
 
 example (a b c : ℝ) (h : a = b + c) : a * a = a * b + a * c := by
-  sorry
+  calc
+  a * a = a * (b+c) := by rw[h]
+  _ = a * b + a * c := by ring
 
 
 
@@ -208,28 +225,44 @@ If you have time left, also try them directly with `rw`.
 
 example (a b c : ℝ) (h : a = b - c) (h2 : b * b = 2 * c) :
     a * b = (2 - b) * c := by
-  sorry
+  calc
+  a * b = (b - c) * b := by rw[h]
+  _ = b * b - c * b := by ring
+  _ = 2 * c - c * b := by rw[h2]
+  _ = 2 * c - b * c := by ring
+  _ = (2 - b) * c := by ring
 
 example (x y z w : ℂ) (h : z = x * y) (h2 : y + 1 = w) :
     x * z = x ^ 2 * (w - 1) := by
-  sorry
+  symm at h2
+  rw[h2]
+  rw[h]
+  ring
 
-/-
-If you haven't installed Lean yet, navigate to
-  https://live.lean-lang.org/
-and copy the following lines into the editor: (without the backticks)
-```
-import Mathlib.Tactic
+
 
 example (a b c : ℝ) (h : a = b - c) (h2 : b * b = 2 * c) :
     a * b = (2 - b) * c := by
-  sorry
+  calc
+  a * b = (b - c) * b := by rw[h]
+  _ = b * b - c * b := by ring
+  _ = 2 * c - c * b := by rw[h2]
+  _ = 2 * c - b * c := by ring
+  _ = (2 - b) * c := by ring
 
 example (x y z w : ℂ) (h : z = x * y) (h2 : y + 1 = w) :
     x * z = x ^ 2 * (w - 1) := by
-  sorry
-```
--/
+    symm
+    calc
+      x ^ 2 * (w - 1) = x ^ 2 * y := by
+        symm at h2
+        rw[h2]
+        ring
+      _ = x * z := by
+        rw[h]
+        ring
+
+
 
 
 
@@ -257,12 +290,20 @@ We can do this with the `have` tactic.
 -/
 
 example (p q r : Prop) (hpq : p → q) (hpqr : p → q → r) : p → r := by
-  sorry
+  intro hp
+  have f1 : q := hpq hp
+  have f2 : r := hpqr hp f1
+  assumption
 
 /- We can also use `specialize` to apply a hypothesis to arguments. -/
 example (p q : Prop) (a b c : ℝ) (hq : p → q) (hr : p → q → a = b) :
     p → a + c = b + c := by
-  sorry
+  intro hp
+  specialize hr hp
+  specialize hq hp
+  specialize hr hq
+  rw[hr]
+
 
 
 
@@ -278,12 +319,24 @@ We do this with the `apply` tactic.
 -/
 
 example (p q r s : Prop) (hq : p → s → q) (hr : q → r) : s → p → r := by
-  sorry
+  intro (hs : s) (hp : p)
+  apply hr
+  specialize hq hp hs
+  assumption
+
+
+
+
+
+
 
 /- We can also use `exact` or `refine` with more complicated proof terms. -/
 
 example (p q r : Prop) (hq : p → p → q) (hr : q → r) : p → r := by
-  sorry
+  intro hp
+  refine hr ?_
+  specialize hq hp hp
+  assumption
 
 
 
@@ -298,7 +351,11 @@ variable (f g : ℝ → ℝ)
 #check (continuous_sin : Continuous (fun x : ℝ ↦ sin x))
 
 example : Continuous (fun x ↦ x + x * Real.sin x) := by
-  sorry
+  apply Continuous.add
+  · exact continuous_id
+  · apply Continuous.mul
+    · exact continuous_id
+    · exact continuous_sin
 
 /-
 **Difference between `rw` and `apply`**
@@ -329,13 +386,15 @@ example : Continuous (fun x ↦ x + x * Real.sin x) := by
 
 
 example (h : a ≤ b) : exp a ≤ exp b := by
-  sorry
+  apply exp_le_exp.2
+  exact h
 
 example (h : a ≤ b) : exp a ≤ exp b := by
   sorry
 
 example (h : exp a ≤ exp b) : a ≤ b := by
-  sorry
+  apply exp_le_exp.1
+  exact h
 
 example (h : exp a ≤ exp b) : a ≤ b := by
   sorry

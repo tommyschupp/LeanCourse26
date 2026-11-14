@@ -3,6 +3,8 @@ module
 public import Mathlib.Analysis.Calculus.Deriv.Basic
 public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 public import Mathlib.FieldTheory.Finite.Basic
+public import Mathlib.Algebra.GCDMonoid.Multiset
+
 
 noncomputable section
 
@@ -56,6 +58,13 @@ Last time we saw:
 Let's start by defining our own factorial function.
 Note that there is no `:=` in this syntax.
 -/
+
+
+#eval Multiset.gcd {13, 3, 15}
+
+
+
+
 
 def fac : ℕ → ℕ
   | 0     => 1
@@ -115,8 +124,11 @@ is always positive.
 -/
 
 lemma fac_pos (n : ℕ) : 0 < fac n := by
-  sorry
-
+  induction n with
+  | zero => rw[fac]; norm_num
+  | succ n ih =>
+    rw[fac]
+    positivity
 
 
 
@@ -128,17 +140,31 @@ the `simp` tactic to simplify its definition whenever it can.
 -/
 
 @[simp]
-def fib : ℕ → ℕ := sorry
+def fib : ℕ → ℕ
+| 0 => 0
+| 1 => 1
+| n + 2 => fib n + fib (n+1)
 
 example (n : ℕ) : fib (n + 2) = fib n + fib (n + 1) := by
-  sorry
+  simp
 
 
 
 
 lemma fib_add (m n : ℕ) :
     fib (m + n + 1) = fib m * fib n + fib (m + 1) * fib (n + 1) := by
-  sorry
+  induction n generalizing m with
+  | zero => simp
+  | succ n ih =>
+    calc fib (m + (n+1) + 1) =
+      fib ((m + n) + 2) := by simp
+      _ = fib ((m+1) + n + 1) := by congr 1; ring
+      _ = fib (m + 1) * fib (n) + fib (m + 1 + 1) * fib (n+1) := by rw[ih]
+      _ = fib m * fib (n + 1) + fib (m + 1) * fib (n + 1 + 1) := by simp; ring
+
+
+
+
 
 
 
@@ -192,8 +218,16 @@ We could also prove it in `ℕ` (with natural number division),
 but it is more annoying to work with natural number division. -/
 
 example (n : ℕ) : ∑ i ∈ range (n + 1), (i : ℚ) = n * (n + 1) / 2 := by
-  sorry
-
+  induction n with
+  | zero => simp
+  | succ n hn=>
+  · calc ∑ i ∈ range (n + 1 + 1), (i : ℚ) =
+      ∑ i ∈ range (n + 1), (i : ℚ) + (n + 1) := by rw [sum_range_succ]; norm_cast
+      _ = n * (n + 1) / 2 + (n+1) := by rw[hn]
+      _ = n * (n + 1) / 2 + 2 * (n + 1) / 2 := by ring
+      _ = (n + 2) * (n + 1) / 2 := by ring
+      _ = (n + 1 + 1) * (n + 1) / 2 := by ring
+      _ = (↑(n + 1) : ℚ) * (↑(n + 1) + 1) / 2 := by push_cast; ring
 
 
 
@@ -217,7 +251,13 @@ and proving it for `k + 1` if it holds for `k`. -/
 
 
 lemma fac_dvd_fac (n m : ℕ) (h : n ≤ m) : fac n ∣ fac m := by
-  sorry
+  induction m, h using Nat.le_induction with
+  | base => simp
+  | succ l hl1 hl2 =>
+  · rw [fac_succ]
+    exact Nat.dvd_mul_left_of_dvd hl2 (l + 1)
+
+
 
 
 
