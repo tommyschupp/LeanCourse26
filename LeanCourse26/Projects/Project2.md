@@ -4,8 +4,8 @@
 
 Please fill out the following. Fill in the project topic once you have decided.
 ```
-First & last name student 1:
-First & last name student 2 (optional):
+First & last name student 1: Thomas Schupp
+First & last name student 2 (optional): Florian Meister
 Project topic:
 ```
 
