@@ -390,4 +390,3 @@ example : IsSimpleGroup (alternatingGroup (Fin 5)) := by
   sorry
 
 end Index
-
