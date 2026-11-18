@@ -201,7 +201,10 @@ variable (s t : Finset ℕ)
 #check (∅ : Finset ℕ)
 
 example {a b c : Finset ℕ} : a ∩ (b ∪ c) = (a ∩ b) ∪ (a ∩ c) := by
-  sorry
+  ext x
+  simp
+  tauto
+
 
 
 end Nat

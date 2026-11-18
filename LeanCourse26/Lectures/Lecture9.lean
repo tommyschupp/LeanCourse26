@@ -430,12 +430,20 @@ and `Classical.choose` is derived from that. -/
 
 variable [Inhabited α]
 def inverse (f : α → β) (y : β) : α :=
-  sorry
+  let x₀ : α := default
+  if h : ∃ x : α, f x = y then conditionalInverse f y h else x₀
 
 lemma inverse_spec (y : β) (h : ∃ x, f x = y) :
     f (inverse f y) = y := by
-  sorry
-
+  have h2 : inverse f y = conditionalInverse f y h := by rw [show
+                                                             inverse f y =
+                                                               if h : ∃ x, f x = y then
+                                                                 conditionalInverse f y h
+                                                               else default
+                                                             from rfl,
+                                                           dite_eq_left h]
+  rw [h2]
+  rw [invFun_spec f]
 
 
 
@@ -444,14 +452,27 @@ and a left-inverse if `f` is injective.
 We use the `ext` tactic to show that two functions are equal. -/
 
 lemma rightInv_of_surjective (hf : Surjective f) : f ∘ inverse f = id := by
-  sorry
+  ext x
+  simp
+  have h : ∃ y , f y = x := by apply hf
+  rw[inverse_spec f x h]
 
 lemma leftInv_of_injective (hf : Injective f) : inverse f ∘ f = id := by
-  sorry
+  ext x
+  simp
+  have h : ∃ y , f y = f x := by use x
+  apply hf
+  rw[inverse_spec f (f x) h]
 
 /- We can package this together in one statement. -/
 lemma inv_of_bijective (hf : Bijective f) :
     ∃ g : β → α, f ∘ g = id ∧ g ∘ f = id := by
-  sorry
+  use inverse f
+  have hs : Surjective f := by exact Bijective.surjective hf
+  have hi : Injective f := by exact Bijective.injective hf
+  constructor
+  · exact rightInv_of_surjective f hs
+  · exact leftInv_of_injective f hi
+
 
 end Inverse

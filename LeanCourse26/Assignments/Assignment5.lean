@@ -95,6 +95,7 @@ end choice
 
 section
 
+
 variable {α β γ ι : Type*} (f : α → β) (x : α) (s : Set α)
 
 /- `InjOn` states that a function is injective when restricted to `s`.
@@ -102,9 +103,9 @@ variable {α β γ ι : Type*} (f : α → β) (x : α) (s : Set α)
 Now prove the following example, mimicking the proof from the lecture.
 If you want, you can define `g` separately first.
 -/
+
 lemma inverse_on_a_set [Inhabited α] (hf : InjOn f s) : ∃ g : β → α, LeftInvOn g f s := by
   sorry
-
 -- In the lecture, we also saw injectivity and bijectivity of functions.
 -- There is another variant, "bijectivity on a set":
 def BijectiveOn {α β : Type*} (f : α → β) (s : Set α) (t : Set β) : Prop :=
@@ -146,8 +147,69 @@ such an equivalence.
 Hint: it might be useful to define auxilliary functions and lemmas that
 can be used in the main proof body
 -/
-example (hf : Injective f) (hg : Injective g) (H : range f = range g) : α ≃ β :=
-  sorry
+
+lemma helper_alpha (H : range f = range g) (a : α) : ∃ b : β , g b = f a := by
+  rw [← mem_range, ← H]
+  apply mem_range_self
+
+lemma helper_beta (H : range f = range g) (b : β) : ∃ a : α , f a = g b := by
+  rw [← mem_range, H]
+  apply mem_range_self
+
+def inverse_f (b : β) (h : ∃ a : α , f a = g b ) : α :=
+  Classical.choose h
+
+def inverse_g  (a : α) (h : ∃ b : β , g b = f a) : β :=
+  Classical.choose h
+
+-- I used AI to help me with proving h2, as I couldn't do it
+
+lemma left_inv_helper (hf : Injective f) (a : α) (h : ∃ b : β , g b = f a) :
+  inverse_f (inverse_g a h) ⟨a, (Classical.choose_spec h).symm⟩ = a := by
+  apply hf
+  have h1 : g (inverse_g a h) = f a := Classical.choose_spec h
+  have h2 : f (inverse_f (inverse_g a h) ⟨a, (Classical.choose_spec h).symm⟩) = g (inverse_g a h)
+  := by
+    exact Classical.choose_spec
+      (⟨a, (Classical.choose_spec h).symm⟩ :
+        ∃ x : α, f x = g (inverse_g a h))
+  rw [h2]
+  exact h1
+
+lemma right_inv_helper (hg : Injective g) (b : β) (h : ∃ a : α , f a = g b) :
+  inverse_g (inverse_f b h) ⟨b, (Classical.choose_spec h).symm⟩ = b := by
+  apply hg
+  have h1 : f (inverse_f b h) = g b := Classical.choose_spec h
+  have h2 : g (inverse_g (inverse_f b h) ⟨b, (Classical.choose_spec h).symm⟩) = f (inverse_f b h)
+  := by
+    exact Classical.choose_spec
+      (⟨b, (Classical.choose_spec h).symm⟩ :
+        ∃ x : β, g x = f (inverse_f b h))
+  rw [h2]
+  exact h1
+
+lemma left_inv (hf : Injective f) (H : range f = range g) :
+  LeftInverse (fun b => inverse_f b (helper_beta H b)) (fun a => inverse_g a (helper_alpha H a))
+  := by
+  rw [leftInverse_iff_comp]
+  ext a
+  simp
+  apply left_inv_helper hf
+
+lemma right_inv (hg : Injective g) (H : range f = range g) :
+  RightInverse (fun b => inverse_f b (helper_beta H b)) (fun a => inverse_g a (helper_alpha H a))
+  := by
+  rw [rightInverse_iff_comp]
+  ext b
+  simp
+  apply right_inv_helper hg
+
+example (hf : Injective f) (hg : Injective g) (H : range f = range g) : α ≃ β where
+  toFun := fun a => inverse_g a (helper_alpha H a)
+  invFun := fun b => inverse_f b (helper_beta H b)
+  left_inv := left_inv hf H
+  right_inv := right_inv hg H
+
 
 end choice
 
@@ -160,9 +222,54 @@ behind notation. But you can use `apply` to use the lemmas about real numbers. -
 
 abbrev PosRat : Type := {x : ℚ // 0 < x}
 
+def PosRatInv (a : PosRat) : PosRat :=
+  let ⟨a', h⟩ := a
+  let ainv := (1/a')
+  have h1 : 0 < ainv := by rw [one_div_pos]; exact h
+  ⟨ainv, h1⟩
 
-instance groupPosRat : Group PosRat :=
-  sorry
+instance groupPosRat : Group PosRat where
+  one := 1
+  mul := fun a b => a * b
+  mul_assoc := by {
+    intro a b c
+    apply mul_assoc
+  }
+  one_mul := by {
+    intro a
+    simp
+  }
+  mul_one := by {
+    intro a
+    simp
+  }
+  npow_zero := by simp
+  npow_succ := by {
+    intro x y
+    apply Monoid.npow_succ
+  }
+  inv := fun a => PosRatInv a
+  div_eq_mul_inv := by {
+    exact fun a b ↦ Subtype.ext rfl
+  }
+  zpow_zero' := by {
+    exact fun a ↦ Eq.symm (Subtype.ext rfl)
+  }
+  zpow_succ' := by {
+    exact fun n a ↦ Eq.symm (Subtype.ext rfl)
+  }
+  zpow_neg' := by {
+    exact fun n a ↦ Subtype.ext rfl
+  }
+  inv_mul_cancel := by {
+    intro a
+    unfold PosRatInv
+    ext
+    rw [Positive.val_mul, Subtype.coe_mk, Rat.div_mul_cancel]
+    simp
+    apply Subtype.prop at a
+    exact Rat.ne_of_gt a
+  }
 
 
 
@@ -194,9 +301,76 @@ Hints:
 -/
 attribute [-simp] Finset.card_powerset
 #check Finset.induction
+open Classical
+
+lemma disjointness (α : Type*) (s : Finset α) (x : α) (hxs : x ∉ s) :
+  s.powerset ∩ Finset.image (insert x) s.powerset = ∅ := by
+  ext u
+  rw [Finset.mem_inter, Finset.mem_powerset, Finset.mem_image]
+  simp_rw [Finset.insert_eq]
+  rw [← exists_and_left]
+  constructor
+  · intro hx
+    obtain ⟨y, hy⟩ := hx
+    rw [Finset.mem_powerset] at hy
+    have h1 : u ⊆ s := by apply hy.1
+    have h2 : {x} ∪ y = u := by apply hy.2.2
+    rw[←h2] at h1
+    simp
+    have h3 : x ∈ s := by
+      apply Finset.union_subset_left at h1; rw [Finset.singleton_subset_iff] at h1; exact h1
+    contradiction
+  · simp
+
+
+lemma injectivity (α : Type*) (s : Finset α) (x : α) (hxs : x ∉ s) :
+  InjOn (insert x) (↑s.powerset : Set (Finset α)) := by
+  intro t ht p hp htp
+  rw [Finset.mem_coe] at ht hp
+  rw [Finset.mem_powerset] at ht hp
+  have h1 : x ∉ t := by exact Finset.not_mem_subset ht hxs
+  have h2 : x ∉ p := by exact Finset.not_mem_subset hp hxs
+  rw [← Finset.union_singleton] at htp
+  rw [← Finset.union_singleton] at htp
+  ext a
+  constructor
+  · intro ha
+    have h3 : a ≠ x := by exact ne_of_mem_of_not_mem (ht ha) hxs
+    have h4 : a ∈ p ∪ {x} := by rw [← htp]; exact Finset.mem_union_left {x} ha
+    rw [Finset.mem_union, or_iff_not_imp_right, Finset.notMem_singleton] at h4
+    specialize h4 h3
+    exact h4
+  · intro ha
+    have h3 : a ≠ x := by exact ne_of_mem_of_not_mem (hp ha) hxs
+    have h4 : a ∈ t ∪ {x} := by rw [htp]; exact Finset.mem_union_left {x} ha
+    rw [Finset.mem_union, or_iff_not_imp_right, Finset.notMem_singleton] at h4
+    specialize h4 h3
+    exact h4
+
+
+
+
+
+
+
+
+
 
 lemma finset_card_powerset (α : Type*) (s : Finset α) :
     Finset.card (Finset.powerset s) = 2 ^ Finset.card s := by
-  sorry
+  induction s using Finset.induction with
+  | empty => rw [Finset.card_powerset]
+  | @insert x s hxs ih =>
+    have disjointness : s.powerset ∩ Finset.image (insert x) s.powerset = ∅ :=
+      by apply disjointness; exact hxs
+    rw [Finset.powerset_insert, Finset.card_union, disjointness, Finset.card_empty]
+    simp
+    rw [ih, Finset.card_insert_of_notMem hxs, Nat.two_pow_succ, Nat.add_right_inj,
+    Finset.card_image_of_injOn]
+    exact ih
+    have injectivity : InjOn (insert x) (↑s.powerset : Set (Finset α)) :=
+      by apply injectivity; exact hxs
+    exact injectivity
+
 
 end cardinality

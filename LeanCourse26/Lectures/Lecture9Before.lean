@@ -190,7 +190,7 @@ variable {X Y : PointedType}
 infix:50 " →.. " => PointedFunction
 
 instance {X Y : PointedType} : CoeFun (X →.. Y) (fun _ ↦ X → Y) :=
-  sorry
+  ⟨fun f => f.toFun⟩
 
 -- This tells the pretty printer to print the operation with `↑`.
 attribute [coe] PointedFunction.toFun
@@ -199,10 +199,12 @@ namespace PointedFunction
 
 variable {X Y Z : PointedType}
 
-@[simp] lemma coe_pt (f : X →.. Y) : f X.pt = Y.pt := sorry
+@[simp] lemma coe_pt (f : X →.. Y) : f X.pt = Y.pt := f.toFun_pt
 
-def comp (g : Y →.. Z) (f : X →.. Y) : X →.. Z :=
-  sorry
+def comp (g : Y →.. Z) (f : X →.. Y) : X →.. Z where
+  toFun := g ∘ f
+  toFun_pt := by simp
+
 
 end PointedFunction
 
@@ -229,17 +231,29 @@ and generally it's easier to reformulate a statement without using subtypes. -/
 /- Codomain is a subtype (usually not recommended). -/
 example (f : ℝ → PosReal) (hf : Monotone f) :
     Monotone (fun x ↦ log (f x)) := by
-  sorry
+  intro x y hxy
+  simp
+  gcongr
+  · exact (f x).property
+  · apply hf
+    exact hxy
+
 
 /- Specify that the range is a subset of a given set (recommended). -/
 example (f : ℝ → ℝ) (hf : Set.range f ⊆ {x | x > 0}) (h2f : Monotone f) :
     Monotone (log ∘ f) := by
-  sorry
+  intro x y hxy
+  simp
+  gcongr
+  · apply hf
+    exact Set.mem_range_self x
+  · apply h2f hxy
 
 /- Domain is a subtype (not recommended). -/
 example (f : PosReal → ℝ) (hf : Monotone f) :
     Monotone (fun x ↦ f ⟨exp x, exp_pos x⟩) := by
   sorry
+
 
 
 /- Define a function on the whole type, but
@@ -264,13 +278,17 @@ variable (x y : ℝ)
 /- A `Setoid` is the name for an equivalence relation in Lean.
 Let's define the trivial equivalence relation on the integers. -/
 def myEquivalenceRelation : Setoid ℤ where
-  r k l := sorry
+  r k l := k = l
   iseqv :=
-    sorry
+    {
+      refl := by simp
+      symm := by simp
+      trans := by simp
+    }
 
 /- This simp-lemma will simplify `x ≈ y` to `x = y` in the lemma below. -/
 @[simp] lemma equiv_iff_eq (k l : ℤ) :
-  letI := myEquivalenceRelation; k ≈ l ↔ k = l := sorry
+  letI := myEquivalenceRelation; k ≈ l ↔ k = l := by rfl
 
 /-
 Let's prove that taking the quotient w.r.t. this equivalence relation is
@@ -283,8 +301,22 @@ Use `Quotient.ind` to prove something for all elements of a quotient.
 You can use this using the induction tactic: `induction x using Quotient.ind; rename_i x`.
 -/
 def quotient_equiv_subtype :
-    Quotient (myEquivalenceRelation) ≃ ℤ :=
-  sorry
+    Quotient (myEquivalenceRelation) ≃ ℤ where
+    toFun := Quotient.lift (fun a : ℤ => a)
+      (by
+        intros
+        simp at *
+        assumption)
+    invFun a := Quotient.mk _ a
+    left_inv := by
+      unfold LeftInverse
+      apply Quotient.ind
+      intro a
+      simp
+    right_inv := by
+      intro a
+      simp
+
 
 /-- Let's define the equivalence relation for the even numbers: two numbers are equivalent
 iff their difference is an even number. -/
@@ -292,10 +324,16 @@ def evensEquivalenceRelation : Setoid ℤ where
   r k l := ∃ n, k - l = 2 * n
   iseqv := {
     refl := by
-      sorry
+      simp
     symm := by
-      sorry
+      simp
+      intro a b c h
+      use (-c)
+      rw [Int.mul_neg, Int.eq_neg_comm, Int.neg_sub]
+      rw[h]
     trans := by
+      simp
+      intros
       sorry
   }
 
@@ -324,7 +362,12 @@ We can prove the usual axiom of choice from it.
 
 theorem normal_axiom_of_choice {ι α : Type*} {s : ι → Set α} (h : ∀ i, (s i).Nonempty) :
     Nonempty {f : ι → α | ∀ i, f i ∈ s i} := by
-  sorry
+  let f i := (h i).choose
+  use f
+  intro i
+  exact (h i).choose_spec
+
+
 
 
 
