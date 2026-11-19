@@ -69,47 +69,33 @@ lemma pg_power (x : one_gen_no_relns) : is_power x := by
   exact PresentedGroup.induction_on x fg_power
 
 
-
-
-
-
--- [DecidableEq (Fin 1)]
-example : (one_gen_no_relns ≃* Multiplicative ℤ) := by
+def one_gen_no_relns_equiv_mul_Z : (one_gen_no_relns ≃* Multiplicative ℤ) := by
   let f : Fin 1 → Multiplicative ℤ
   | 0 => Multiplicative.ofAdd 1
   have f_respects_relns :
     ∀ r ∈ ({} : Set (FreeGroup (Fin 1))) , (FreeGroup.lift f) r = 1 := by tauto
   let phi : one_gen_no_relns →* Multiplicative ℤ :=
     PresentedGroup.toGroup f_respects_relns
-  -- let g : one_gen_no_relns := PresentedGroup.of 0
   have hg : phi g = Multiplicative.ofAdd 1 := by
     rw[PresentedGroup.toGroup.of f_respects_relns]
-
-  -- have hg : phi g = 1 := by
-  --   rw[PresentedGroup.toGroup.of f_respects_relns]
-
   have h_inj : Function.Injective phi := by {
     intro x y hxy
-    obtain ⟨a, ha⟩ := QuotientGroup.mk_surjective x
-    obtain ⟨b, hb⟩ := Quot.mk_surjective a
-    have hx : ∃ m : ℤ, x = g ^ m := by sorry
-    have hy : ∃ n : ℤ , y = g ^ n := by sorry
+    have hx : ∃ m : ℤ, x = g ^ m := pg_power x
+    have hy : ∃ n : ℤ , y = g ^ n := pg_power y
     obtain ⟨m, hm⟩ := hx
     obtain ⟨n, hn⟩ := hy
-    rw[hm, hn] at hxy
-    have hphin : phi (g ^ n) = phi (g) ^ n := by sorry
-    have hphim : phi (g ^ m) = phi (g) ^ m := by sorry
-    rw[hphin, hphim] at hxy
-    have hxy_move : (phi (g)) ^ (m - n) = 1 := by sorry
-    have hmn : m - n = 0 := by sorry
-    have xy_move : g ^ (m - n) = 1 := by sorry
-    have xy : g ^ m = g ^ n := by sorry
-    rw[hm, hn]
-    exact xy
+    rw [hm, hn, MonoidHom.map_zpow, MonoidHom.map_zpow] at hxy
+    rw [hg, ← ofAdd_zsmul, ← ofAdd_zsmul, Int.zsmul_eq_mul, Int.zsmul_eq_mul, Int.mul_one,
+      Int.mul_one, Equiv.apply_eq_iff_eq] at hxy
+    rw [hxy] at hm
+    rw [← hn] at hm
+    assumption
     }
   have h_surj : Function.Surjective phi := by {
     intro n
-    sorry
+    let (m : ℤ) := n
+    use (g ^ (Multiplicative.toAdd n))
+    rw [MonoidHom.map_zpow, hg, ← ofAdd_zsmul, Int.zsmul_eq_mul, Int.mul_one, ofAdd_toAdd]
   }
   have h_bij : Function.Bijective phi := by {
     constructor
