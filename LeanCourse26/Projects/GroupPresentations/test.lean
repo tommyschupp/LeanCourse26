@@ -103,3 +103,37 @@ def one_gen_no_relns_equiv_mul_Z : (one_gen_no_relns ≃* Multiplicative ℤ) :=
     · exact h_surj
   }
   apply MulEquiv.ofBijective phi h_bij
+
+
+
+
+
+
+-- FreeGroup.of 0 is the image of 0 under the map Fin 1 → FreeGroup (Fin 1), so is the generator
+abbrev one_gen_mod_5 : Type :=
+  PresentedGroup ({(FreeGroup.of 0) ^ 5} : Set (FreeGroup (Fin 1)))
+
+abbrev Q₅ : FreeGroup (Fin 1) →* one_gen_mod_5 :=
+  PresentedGroup.mk {(FreeGroup.of 0) ^ 5}
+
+abbrev g₅ : one_gen_mod_5 := PresentedGroup.of 0
+
+abbrev f' : Fin 1 → one_gen_mod_5
+  | 0 => g₅
+
+lemma f'_respects_relns :
+    ∀ r ∈ ({} : Set (FreeGroup (Fin 1))) , (FreeGroup.lift f') r = 1 := by tauto
+
+abbrev p : one_gen_no_relns →* one_gen_mod_5 := PresentedGroup.toGroup f'_respects_relns
+
+lemma Q₅_factor : Q₅ = p.comp Q := by
+  apply FreeGroup.ext_hom Q₅ (p.comp Q)
+  intro a
+  have ha : a = 0 := by
+    exact Fin.fin_one_eq_zero a
+  have hp : p g = g₅ := by
+    exact PresentedGroup.toGroup.of f'_respects_relns
+  have hQ₅ : Q₅ (FreeGroup.of 0) = g₅ := rfl
+  have hQ : Q (FreeGroup.of 0) = g := rfl
+  simp
+  rw [ha, hQ, hp, hQ₅]
