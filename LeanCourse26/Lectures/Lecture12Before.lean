@@ -51,7 +51,16 @@ local instance : Subgroup.Normal (Commutator G) :=
 abbrev Abelianization' := G ⧸ Commutator G
 
 example : CommGroup (Abelianization' G) := by
-  sorry
+  apply CommGroup.mk
+  intro a b
+  induction a using QuotientGroup.induction_on with
+  | H a =>
+    induction b using QuotientGroup.induction_on with
+    | H b =>
+      rw [←QuotientGroup.mk_mul, ←QuotientGroup.mk_mul, QuotientGroup.eq]
+      apply Subgroup.mem_closure_of_mem
+      use b⁻¹, a⁻¹
+      group
 
 
 /- Recall that there is a hierarchy of algebraic instances:
