@@ -1,5 +1,6 @@
 import LeanCourse26.Projects.GroupPresentations.int_mod_5
 import Mathlib.GroupTheory.Coxeter.Basic    -- Coxeter groups
+import Mathlib.LinearAlgebra.Matrix.Notation-- Matrices, needed for defining Coxeter groups
 import Mathlib.Data.Finite.Perm             -- Cardinality of S_n
 import Mathlib.Algebra.Group.End            -- Symmetric group stuff
 import Mathlib.Logic.Equiv.Basic            -- Transpositions represented by swap
@@ -39,6 +40,7 @@ lemma swap_order (a b : (Fin 5)) (h : a ≠ b) : orderOf (swap a b) = 2 := by
     rw [Perm.swap_isSwap_iff]
     assumption
   exact Perm.IsSwap.orderOf hs
+  -- Never delete code!
   -- intro h
 
   -- apply (orderOf_eq_iff Nat.zero_lt_two).2
@@ -80,7 +82,6 @@ lemma disj_swap_comm (a b c d : (Fin 5)) (h : a ≠ b ∧ c ≠ d ∧ a ≠ c �
         exact h.2.2.2.2.2.symm
   · exact h.2.1
   · exact h.1
-  -- Never delete code!
   -- unfold Disjoint
   -- intro x hx
 
@@ -115,3 +116,97 @@ lemma adj_swap_ord (a b c : (Fin 5)) (h : a ≠ b ∧ a ≠ c ∧ b ≠ c): ((sw
   have ho : orderOf ((swap a b) * (swap b c)) = 3 := by
     exact Perm.IsThreeCycle.orderOf h3
   rw [← ho, pow_orderOf_eq_one]
+
+
+
+
+-- Explicit definition of Coxeter matrix (not proven to be Coxeter in Lean yet)
+def M : Matrix (Fin 4) (Fin 4) ℕ :=
+  !![1, 3, 2, 2;
+     3, 1, 3, 2;
+     2, 3, 1, 3;
+     2, 2, 3, 1]
+
+
+-- Algorithmic definition of Coxeter matrix
+-- This can be expanded for arbtirary n, and proving things about it should be easier
+-- Matrix.of allows you to construct an n×m matrix from a function (Fin n) × (Fin m) → ℕ.
+def C : Matrix (Fin 4) (Fin 4) ℕ :=
+  Matrix.of fun i j =>
+    if i.val = j.val then 1
+    else if i.val + 1 = j.val then 3
+    else if i.val = j.val + 1 then 3
+    -- else if |(i.val : ℤ) - j.val| = 1 then 3    -- Need to do some funny coercion to subtract
+    else 2
+
+
+-- Here you can check that C is equal to M above
+#eval C
+
+
+-- First requirement for Coxeter matrix
+lemma C_is_symm : C.IsSymm := by
+  rw [Matrix.IsSymm.ext_iff]
+  intro i j
+  -- simp only [C, Matrix.of_apply]
+  -- split_ifs
+  by_cases he : i.val = j.val
+  · simp [C, he]
+  -- · by_cases h1 : |(i.val : ℤ) - j.val| = 1
+  --   · simp [C, h1]
+  · by_cases h1 : i.val + 1 = j.val
+    · simp [C, h1.symm]
+    · by_cases h2 : i.val = j.val + 1
+      · simp [C, h2]
+      · simp [C, he, h1, h2]
+        simp [Ne.symm he, Ne.symm h2, Ne.symm h1]
+    -- Since C j i has the indices reversed, you need to reverse the direction of the equalities
+
+
+-- Second requirement
+lemma C_diagonal (i : Fin 4) : C i i = 1 := by
+  simp[C]
+
+
+-- Third requirement
+lemma C_off_diagonal (i j : Fin 4) : i ≠ j → C i j ≠ 1 := by
+  intro h
+  have h' : i.val ≠ j.val := by
+    exact Fin.val_ne_of_ne h
+  simp [C]
+  split_ifs with h1 h2
+  · constructor
+    · assumption
+    · simp
+  · constructor
+    · assumption
+    · simp
+  · constructor
+    · assumption
+    · simp
+
+  -- by_contra hc
+  -- simp[C] at hc
+  -- split_ifs at hc with h1 h2
+  -- · have h' : 3 = 1 := by
+  --     apply hc
+  --     assumption
+  --   contradiction
+  -- · have h' : 3 = 1 := by
+  --     apply hc
+  --     assumption
+  --   contradiction
+  -- ·
+
+
+-- The Coxeter matrix defining our group
+abbrev C₄_matrix : CoxeterMatrix (Fin 4) where
+  M := C
+  isSymm := C_is_symm
+  diagonal := C_diagonal
+  off_diagonal := C_off_diagonal
+
+
+-- The actual Coxeter group C₄ that will be isomorphic to S₅
+-- Don't know if "Type" is the right thing to put here
+abbrev C₄ : Type := CoxeterMatrix.Group C₄_matrix
