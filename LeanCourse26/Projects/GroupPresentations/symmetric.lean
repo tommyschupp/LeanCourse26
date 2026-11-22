@@ -63,8 +63,9 @@ lemma swap_order (a b : (Fin 5)) (h : a ≠ b) : orderOf (swap a b) = 2 := by
 
 
 
--- The statement and proof are garbo but it's a start
-lemma disj_swap_comm (a b c d : (Fin 5)) (h : a ≠ b ∧ c ≠ d ∧ a ≠ c ∧ a ≠ d ∧ b ≠ c ∧ b ≠ d) :
+-- Maybe would like to remove the a ≠ b and c ≠ d assumptions
+lemma disj_swap_comm {a b c d : (Fin 5)} (hab : a ≠ b) (hcd : c ≠ d) (hac : a ≠ c) (had : a ≠ d)
+  (hbc : b ≠ c) (hbd : b ≠ d) :
   (swap a b) * (swap c d) = (swap c d) * (swap a b) := by
   -- intro h
   apply Perm.Disjoint.commute
@@ -73,16 +74,16 @@ lemma disj_swap_comm (a b c d : (Fin 5)) (h : a ≠ b ∧ c ≠ d ∧ a ≠ c �
     constructor
     · constructor
       · rw [← ne_eq]
-        exact h.2.2.1.symm
+        exact hac.symm
       · rw [← ne_eq]
-        exact h.2.2.2.2.1.symm
+        exact hbc.symm
     · constructor
       · rw [← ne_eq]
-        exact h.2.2.2.1.symm
+        exact had.symm
       · rw [← ne_eq]
-        exact h.2.2.2.2.2.symm
-  · exact h.2.1
-  · exact h.1
+        exact hbd.symm
+  · exact hcd
+  · exact hab
   -- unfold Disjoint
   -- intro x hx
 
@@ -96,21 +97,22 @@ lemma disj_swap_comm (a b c d : (Fin 5)) (h : a ≠ b ∧ c ≠ d ∧ a ≠ c �
 
 
 -- Swaps satisfy third relation of Coxeter group
-lemma disj_swap_ord (a b c d : (Fin 5)) (h : a ≠ b ∧ c ≠ d ∧ a ≠ c ∧ a ≠ d ∧ b ≠ c ∧ b ≠ d) :
+lemma disj_swap_ord {a b c d : (Fin 5)} (hab : a ≠ b) (hcd : c ≠ d) (hac : a ≠ c) (had : a ≠ d)
+  (hbc : b ≠ c) (hbd : b ≠ d) :
   ((swap a b) * (swap c d)) ^ 2 = 1 := by
   -- intro h
-  obtain ⟨hab, hcd, hac, had, hbc, hbd⟩ := h
+  -- obtain ⟨hab, hcd, hac, had, hbc, hbd⟩ := h
   rw [sq, mul_assoc, ← mul_assoc (swap c d) (swap a b) (swap c d)]
-  rw [disj_swap_comm c d a b ⟨hcd, hab, hac.symm, hbc.symm, had.symm, hbd.symm⟩, mul_swap_mul_self,
+  rw [disj_swap_comm hcd hab hac.symm hbc.symm had.symm hbd.symm, mul_swap_mul_self,
     swap_mul_self]
 
 
 
 -- Swaps satisfy second relation of Coxeter group
-lemma adj_swap_ord (a b c : (Fin 5)) (h : a ≠ b ∧ a ≠ c ∧ b ≠ c): ((swap a b) * (swap b c)) ^ 3 = 1
-  := by
+lemma adj_swap_ord {a b c : (Fin 5)} (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) :
+  ((swap a b) * (swap b c)) ^ 3 = 1 := by
   -- have : Perm.support_swap_mul_swap
-  obtain ⟨hab, hac, hbc⟩ := h
+  -- obtain ⟨hab, hac, hbc⟩ := h
   have h3 : Perm.IsThreeCycle (swap a b * swap b c) := by
     rw [swap_comm]
     exact Perm.isThreeCycle_swap_mul_swap_same hab.symm hbc hac
