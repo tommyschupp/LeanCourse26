@@ -443,3 +443,13 @@ noncomputable def fin_grp_surj_equiv {G H : Type} [Group G] [Fintype G] [Group H
   G ≃* H := by
   have hb : Function.Bijective f := fin_grp_surj f hs hgle
   apply MulEquiv.ofBijective f hb
+
+
+
+-- Attempting to prove size of C₄ in a way that scales
+-- Maybe this will be harder than just doing it
+abbrev cast_3 : Fin 3 → Fin 4 := fun n ↦ Fin.castLE (by decide) n
+
+abbrev C₃_incl : Fin 3 → S₅ := F ∘ cast_3
+
+abbrev C₃_image : Subgroup S₅ := Subgroup.closure (Set.range C₃_incl)
