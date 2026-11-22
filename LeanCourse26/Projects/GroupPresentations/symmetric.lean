@@ -367,6 +367,20 @@ lemma ajd_swap_Phi_img : ∀ (i : Fin 4), ∃ (x : C₄), Phi x = swap (caster i
   -- apply PresentedGroup.toGroup.of F_resp_rels
 
 
+lemma surj_helper_cast {y : Fin 4} : caster y = y.castSucc := by
+  unfold caster
+  exact Eq.symm (Fin.eq_of_val_eq rfl)
+
+lemma surj_helper_cast_succ {y : Fin 4} : (caster y) + 1 = y.succ := by
+        rw [surj_helper_cast]
+        exact Fin.coeSucc_eq_succ
+
+lemma surj_helper_fun : F = fun (i : Fin 4) ↦ swap i.castSucc i.succ := by
+  ext x
+  unfold F
+  rw [surj_helper_cast_succ, surj_helper_cast]
+
+
 -- The group homomorphism Phi: C₄ → S₅ is surjective
 lemma Phi_surj : Function.Surjective Phi := by
   have hm : Submonoid.closure (Set.range F) ≤ (Phi.range).toSubmonoid := by
@@ -381,34 +395,24 @@ lemma Phi_surj : Function.Surjective Phi := by
     rw [← hy, ← PresentedGroup.toGroup.of F_resp_rels]
     rfl
   have hs : (Set.range fun (i : Fin 4) ↦ swap i.castSucc i.succ) = Set.range F := by
-    ext x
-    constructor
-    · simp
-      intro y hy
-      use y
-      rw [show F y = swap (caster y) (caster y + 1) from rfl]
-      have hc : caster y = y.castSucc := by
-        unfold caster
-        exact Eq.symm (Fin.eq_of_val_eq rfl)
-      have hc' : (caster y) + 1 = y.succ := by
-        rw [hc]
-        exact Fin.coeSucc_eq_succ
-      rw [← hy, ← hc, ← hc']
-    · simp
-      intro y hy
-      unfold F at hy
-      have hc : caster y = y.castSucc := by
-        unfold caster
-        exact Eq.symm (Fin.eq_of_val_eq rfl)
-      have hc' : (caster y) + 1 = y.succ := by
-        rw [hc]
-        exact Fin.coeSucc_eq_succ
-      use y
-      rw[← hy, ← hc, ← hc']
+    rw [surj_helper_fun]
+    -- ext x
+    -- constructor
+    -- · simp
+    --   intro y hy
+    --   use y
+    --   rw [show F y = swap (caster y) (caster y + 1) from rfl]
+    --   have hc : caster y = y.castSucc := surj_helper_cast
+    --   have hc' : (caster y) + 1 = y.succ := surj_helper_cast_succ
+    --   rw [← hy, ← hc, ← hc']
+    -- · simp
+    --   intro y hy
+    --   unfold F at hy
+    --   have hc : caster y = y.castSucc := surj_helper_cast
+    --   have hc' : (caster y) + 1 = y.succ := surj_helper_cast_succ
+    --   use y
+    --   rw[← hy, ← hc, ← hc']
   rw [← hs] at hm
   rw [Perm.mclosure_swap_castSucc_succ] at hm
   exact Function.Surjective.of_comp fun b ↦ hm trivial
-
-
-
   -- rw[← MonoidHom.range_eq_top]
