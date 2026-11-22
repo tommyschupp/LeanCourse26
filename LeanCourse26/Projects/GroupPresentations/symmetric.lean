@@ -416,3 +416,30 @@ lemma Phi_surj : Function.Surjective Phi := by
   rw [Perm.mclosure_swap_castSucc_succ] at hm
   exact Function.Surjective.of_comp fun b ↦ hm trivial
   -- rw[← MonoidHom.range_eq_top]
+
+
+#check Subgroup.card_dvd_of_surjective
+#check Nat.bijective_iff_surjective_and_card
+
+
+
+-- If f: G → H is a surjective homomorphism between finite groups and |G| ≤ |H| then f is bijective
+-- Feel like this proof can be cleaned up
+abbrev fin_grp_surj {G H : Type} [Group G] [Fintype G] [Group H] [Fintype H] (f : G →* H)
+  (hs : Function.Surjective f) (hgle : Nat.card G ≤ Nat.card H) :
+  Function.Bijective f := by
+  -- have hd : Nat.card H ∣ Nat.card G := Subgroup.card_dvd_of_surjective hs
+  have hhle : Nat.card H ≤ Nat.card G := card_le_card_of_surjective (⇑f) hs
+  have he : Nat.card G = Nat.card H := Nat.le_antisymm hgle hhle
+  rw [Nat.bijective_iff_surjective_and_card]
+  constructor
+  · assumption
+  · assumption
+
+
+-- Under same assumptions as above we can conclude G ≅ H.
+noncomputable def fin_grp_surj_equiv {G H : Type} [Group G] [Fintype G] [Group H] [Fintype H]
+  (f : G →* H) (hs : Function.Surjective f) (hgle : Nat.card G ≤ Nat.card H) :
+  G ≃* H := by
+  have hb : Function.Bijective f := fin_grp_surj f hs hgle
+  apply MulEquiv.ofBijective f hb
