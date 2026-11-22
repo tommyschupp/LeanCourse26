@@ -109,7 +109,7 @@ lemma disj_swap_ord {a b c d : (Fin 5)} (hab : a ≠ b) (hcd : c ≠ d) (hac : a
 
 
 -- Swaps satisfy second relation of Coxeter group
-lemma adj_swap_ord {a b c : (Fin 5)} (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) :
+lemma adj_swap_ord_neq {a b c : (Fin 5)} (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) :
   ((swap a b) * (swap b c)) ^ 3 = 1 := by
   -- have : Perm.support_swap_mul_swap
   -- obtain ⟨hab, hac, hbc⟩ := h
@@ -119,6 +119,17 @@ lemma adj_swap_ord {a b c : (Fin 5)} (hab : a ≠ b) (hac : a ≠ c) (hbc : b �
   have ho : orderOf ((swap a b) * (swap b c)) = 3 := by
     exact Perm.IsThreeCycle.orderOf h3
   rw [← ho, pow_orderOf_eq_one]
+
+
+
+-- These are the minimal assumptions we need for later
+lemma adj_swap_ord {a b c : (Fin 5)} (hab : a ≠ b) (hbc : b ≠ c) :
+  ((swap a b) * (swap b c)) ^ 3 = 1 := by
+  by_cases hac : a = c
+  · rw[hac, swap_comm, swap_mul_self]
+    simp
+  · exact adj_swap_ord_neq hab hac hbc
+
 
 
 
@@ -231,6 +242,10 @@ lemma caster_helper {a b : Fin 4} (h : a.val + 1 = b.val) : (caster a) + 1 = cas
 
 
 
+lemma caster_val (a : Fin 4) : a.val = (caster a).val := rfl
+
+
+
 
 
 
@@ -264,14 +279,64 @@ lemma F_resp_rels : ∀ r ∈ C₄_matrix.relationsSet, (FreeGroup.lift F) r = 1
       show F a = swap (caster a) (caster a + 1) from rfl]
     exact swap_mul_self (caster a) ((caster a) + 1)
   · by_cases h2 : a.val + 1 = b.val
-    · simp [h1, h2] at hab
+    · simp [h1, h2] at hab        -- Not sure why h1 is necessary here
       rw [← hab, MonoidHom.map_pow, MonoidHom.map_mul, FreeGroup.lift_apply_of,
         FreeGroup.lift_apply_of]
       unfold F
       rw [caster_helper h2]
-      -- NEED TO PROVE THAT (caster a) ≠ (caster b) ≠ (caster b) + 1 in order to use adj_swap_ord
+      have hab2 : caster a ≠ caster b := by
+        unfold caster
+        simp
+        exact Fin.ne_of_val_ne h1
+      have hbb' : caster b ≠ (caster b) + 1 := by
+        simp
+      exact adj_swap_ord hab2 hbb'
+    · by_cases h3 : a.val = b.val + 1
+      · simp [h3] at hab        -- whereas here h1 and h2 are not necessary here
+        rw [← hab, MonoidHom.map_pow, MonoidHom.map_mul, FreeGroup.lift_apply_of,
+        FreeGroup.lift_apply_of]
+        unfold F
+        rw[caster_helper h3.symm, swap_comm, swap_comm (caster b) (caster a)]
+        have ha'a : (caster a) + 1 ≠ caster a := by
+          simp
+        have hab2 : caster a ≠ caster b := by
+          simp
+          exact Fin.ne_of_val_ne h1
+        exact adj_swap_ord ha'a hab2
+      · simp[h1, h2, h3] at hab
+        rw [← hab, MonoidHom.map_pow, MonoidHom.map_mul, FreeGroup.lift_apply_of,
+          FreeGroup.lift_apply_of]
+        unfold F
+        have haa' : caster a ≠ (caster a) + 1 := by simp
+        have hbb' : caster b ≠ (caster b) + 1 := by simp
+        have hab2 : caster a ≠ caster b := by
+          simp
+          exact Fin.ne_of_val_ne h1
+        have ha'b' : (caster a) + 1 ≠ (caster b) + 1 := by
+          simp
+          exact Fin.ne_of_val_ne h1
+        have hab' : caster a ≠ (caster b) + 1 := by
+          rw [caster_val a, caster_val b, ← Fin.val_add_one_of_lt] at h3
+          exact Fin.ne_of_val_ne h3
+          have hb : (caster b).val < 4 := by simp
+          exact Fin.castSucc_lt_castSucc_iff.mp hb
+        have ha'b : (caster a) + 1 ≠ caster b := by
+          rw [caster_val a, caster_val b, ← Fin.val_add_one_of_lt] at h2
+          exact Fin.ne_of_val_ne h2
+          have ha : (caster a).val < 4 := by simp
+          exact Fin.castSucc_lt_castSucc_iff.mp ha
+        exact disj_swap_ord haa' hbb' hab2 hab' ha'b ha'b'
+
+      -- have hab' : caster a ≠ (caster b) + 1 := by
+      --   rw [caster_val a, caster_val b] at h2
+
       -- have hc : (caster a) + 1 = caster b := by
 
       --   apply Nat.eq_sub_of_add_eq at h2
 
         -- rw[Fin.val_eq_val] at h2
+
+
+
+-- The map C₄ → S₅ that will be our isomorphism
+abbrev Phi : C₄ →* S₅ := PresentedGroup.toGroup F_resp_rels
