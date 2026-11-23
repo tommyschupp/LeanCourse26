@@ -119,13 +119,13 @@ lemma Zₙ_cyclic (n : ℕ) : IsCyclic (Zₙ n) := by
 
 
 def one_gen_mod_n_equiv_ZMod_n (n : ℕ) (hn : NeZero n): (one_gen_mod_n n ≃* Zₙ n) := by
-  have hgₙ : phiₙ n (gₙ n) = (fₙ n) 0 := by
-    apply Multiplicative.ext
-    sorry
+  have hgₙ : (phiₙ n) (gₙ n) = (fₙ n) 0 := by
+    simp [phiₙ]
 
 
   have hgₙ' : phiₙ n (gₙ n) = Multiplicative.ofAdd 1 := by
-    sorry
+    simp [phiₙ]
+    rfl
 
   have h_inj : Function.Injective (phiₙ n) := by
     intro x y hxy
