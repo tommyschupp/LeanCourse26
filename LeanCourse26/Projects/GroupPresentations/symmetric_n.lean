@@ -27,49 +27,23 @@ import Mathlib.Data.Finset.Sort             -- testing
 open Nat      -- Necessary to use ! insead of Nat.factorial
 open Equiv    -- Allows us to use swap instead of Equiv.swap to represent transpositions
 
--- Fin 5 = {0, 1, 2, 3, 4}
-abbrev S₅ : Type := Equiv.Perm (Fin 5)
 
-#eval Fintype.card (Fin 5)
-#eval (Finset.univ : Finset (Fin 5))
-#check Nat.card_perm
-
+abbrev Sₙ (n : ℕ) : Type := Equiv.Perm (Fin n)
 
 -- Order of S₅ is 5!
-lemma S₅_card : Nat.card S₅ = 5! := by
+lemma Sₙ_card (n : ℕ) : Nat.card (Sₙ n) = n ! := by
   rw [Nat.card_perm, card_fin]
 
 
 -- Swaps satisfy first relation of Coxeter group, check below there might be easier way to do
-lemma swap_order (a b : (Fin 5)) (h : a ≠ b) : orderOf (swap a b) = 2 := by
+lemma swap_order (n : ℕ) (a b : (Fin n)) (h : a ≠ b) : orderOf (swap a b) = 2 := by
   have hs : (swap a b).IsSwap := by
-    rw [Perm.swap_isSwap_iff]
-    assumption
+    rwa [Perm.swap_isSwap_iff]
   exact Perm.IsSwap.orderOf hs
-  -- Never delete code!
-  -- intro h
-
-  -- apply (orderOf_eq_iff Nat.zero_lt_two).2
-  -- constructor
-  -- · exact swap_mul_self a b
-  -- · intro m hm₁ hm₂
-  --   have hm : m = 1 := by
-  --     exact Nat.eq_of_le_of_lt_succ hm₂ hm₁
-  --   rw [hm, pow_one]
-  --   intro hs
-  --   rw[swap_eq_one_iff] at hs
-  --   contradiction
-
-
-
--- EASIER WAY: swap_order might be more than we need, this should be sufficient for first relation
-#check swap_mul_self
-
-
-
 
 -- Maybe would like to remove the a ≠ b and c ≠ d assumptions
-lemma disj_swap_comm {a b c d : (Fin 5)} (hab : a ≠ b) (hcd : c ≠ d) (hac : a ≠ c) (had : a ≠ d)
+lemma disj_swap_comm (n : ℕ) {a b c d : (Fin n)}
+  (hab : a ≠ b) (hcd : c ≠ d) (hac : a ≠ c) (had : a ≠ d)
   (hbc : b ≠ c) (hbd : b ≠ d) :
   (swap a b) * (swap c d) = (swap c d) * (swap a b) := by
   -- intro h
@@ -89,32 +63,24 @@ lemma disj_swap_comm {a b c d : (Fin 5)} (hab : a ≠ b) (hcd : c ≠ d) (hac : 
         exact hbd.symm
   · exact hcd
   · exact hab
-  -- unfold Disjoint
-  -- intro x hx
-
-  -- apply Perm.disjoint_iff_eq_or_eq.2
-  -- intro x
-  -- by_cases hx : (swap a b) x = x
-  -- · left
-  --   assumption
-  -- · rw [← ne_eq, swap_apply_ne_self_iff] at hx
-
 
 
 -- Swaps satisfy third relation of Coxeter group
-lemma disj_swap_ord {a b c d : (Fin 5)} (hab : a ≠ b) (hcd : c ≠ d) (hac : a ≠ c) (had : a ≠ d)
+lemma disj_swap_ord (n : ℕ) {a b c d : (Fin n)}
+  (hab : a ≠ b) (hcd : c ≠ d) (hac : a ≠ c) (had : a ≠ d)
   (hbc : b ≠ c) (hbd : b ≠ d) :
   ((swap a b) * (swap c d)) ^ 2 = 1 := by
   -- intro h
   -- obtain ⟨hab, hcd, hac, had, hbc, hbd⟩ := h
   rw [sq, mul_assoc, ← mul_assoc (swap c d) (swap a b) (swap c d)]
-  rw [disj_swap_comm hcd hab hac.symm hbc.symm had.symm hbd.symm, mul_swap_mul_self,
+  rw [(disj_swap_comm n) hcd hab hac.symm hbc.symm had.symm hbd.symm, mul_swap_mul_self,
     swap_mul_self]
 
 
 
 -- Swaps satisfy second relation of Coxeter group
-lemma adj_swap_ord_neq {a b c : (Fin 5)} (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) :
+lemma adj_swap_ord_neq (n : ℕ) {a b c : (Fin n)}
+  (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) :
   ((swap a b) * (swap b c)) ^ 3 = 1 := by
   -- have : Perm.support_swap_mul_swap
   -- obtain ⟨hab, hac, hbc⟩ := h
@@ -128,43 +94,28 @@ lemma adj_swap_ord_neq {a b c : (Fin 5)} (hab : a ≠ b) (hac : a ≠ c) (hbc : 
 
 
 -- These are the minimal assumptions we need for later
-lemma adj_swap_ord {a b c : (Fin 5)} (hab : a ≠ b) (hbc : b ≠ c) :
+lemma adj_swap_ord (n : ℕ) {a b c : (Fin n)}
+  (hab : a ≠ b) (hbc : b ≠ c) :
   ((swap a b) * (swap b c)) ^ 3 = 1 := by
   by_cases hac : a = c
   · rw[hac, swap_comm, swap_mul_self]
     simp
-  · exact adj_swap_ord_neq hab hac hbc
+  · exact adj_swap_ord_neq n hab hac hbc
 
-
-
-
-
--- Explicit definition of Coxeter matrix (not proven to be Coxeter in Lean yet)
-def M : Matrix (Fin 4) (Fin 4) ℕ :=
-  !![1, 3, 2, 2;
-     3, 1, 3, 2;
-     2, 3, 1, 3;
-     2, 2, 3, 1]
 
 
 -- Algorithmic definition of Coxeter matrix
 -- This can be expanded for arbtirary n, and proving things about it should be easier
 -- Matrix.of allows you to construct an n×m matrix from a function (Fin n) × (Fin m) → ℕ.
-def C : Matrix (Fin 4) (Fin 4) ℕ :=
+def C (n : ℕ) : Matrix (Fin n) (Fin n) ℕ :=
   Matrix.of fun i j =>
     if i.val = j.val then 1
     else if i.val + 1 = j.val then 3
     else if i.val = j.val + 1 then 3
-    -- else if |(i.val : ℤ) - j.val| = 1 then 3    -- Need to do some funny coercion to subtract
     else 2
 
-
--- Here you can check that C is equal to M above
-#eval C
-
-
 -- First requirement for Coxeter matrix
-lemma C_is_symm : C.IsSymm := by
+lemma C_is_symm (n : ℕ) : (C n).IsSymm := by
   rw [Matrix.IsSymm.ext_iff]
   intro i j
   -- simp only [C, Matrix.of_apply]
@@ -183,12 +134,12 @@ lemma C_is_symm : C.IsSymm := by
 
 
 -- Second requirement
-lemma C_diagonal (i : Fin 4) : C i i = 1 := by
+lemma C_diagonal (n : ℕ) (i : Fin n) : C n i i = 1 := by
   simp[C]
 
 
 -- Third requirement
-lemma C_off_diagonal (i j : Fin 4) : i ≠ j → C i j ≠ 1 := by
+lemma C_off_diagonal (n : ℕ) (i j : Fin n) : i ≠ j → C n i j ≠ 1 := by
   intro h
   have h' : i.val ≠ j.val := by
     exact Fin.val_ne_of_ne h
@@ -204,186 +155,162 @@ lemma C_off_diagonal (i j : Fin 4) : i ≠ j → C i j ≠ 1 := by
     · assumption
     · simp
 
-  -- by_contra hc
-  -- simp[C] at hc
-  -- split_ifs at hc with h1 h2
-  -- · have h' : 3 = 1 := by
-  --     apply hc
-  --     assumption
-  --   contradiction
-  -- · have h' : 3 = 1 := by
-  --     apply hc
-  --     assumption
-  --   contradiction
-  -- ·
 
 
 -- The Coxeter matrix defining our group
-abbrev C₄_matrix : CoxeterMatrix (Fin 4) where
-  M := C
-  isSymm := C_is_symm
-  diagonal := C_diagonal
-  off_diagonal := C_off_diagonal
+abbrev Cₙ_matrix (n : ℕ) : CoxeterMatrix (Fin n) where
+  M := C n
+  isSymm := C_is_symm n
+  diagonal := C_diagonal n
+  off_diagonal := C_off_diagonal n
 
 
--- The actual Coxeter group C₄ that will be isomorphic to S₅
--- Don't know if "Type" is the right thing to put here
-abbrev C₄ : Type := CoxeterMatrix.Group C₄_matrix
+abbrev Cₙ (n : ℕ): Type := CoxeterMatrix.Group (Cₙ_matrix n)
 
-
--- Coercion from Fin 4 to Fin 5
 -- Fin.CastLE converts Fin n to Fin m provided hypothesis that n ≤ m.
-abbrev caster : Fin 4 → Fin 5 := fun n ↦ Fin.castLE (by decide) n
--- This definition is a little cleaner but messes with proofs down the line
--- abbrev caster : Fin 4 → Fin 5 := Fin.castSucc
+abbrev caster (n : ℕ) : Fin n → Fin (n + 1) := fun m ↦ Fin.castLE (by simp) m
 
 
-lemma caster_val (a : Fin 4) : a.val = (caster a).val := rfl
+lemma caster_val (n : ℕ) (a : Fin n) : a.val = (caster n a).val := rfl
 
 
 -- Used in proof below
-lemma caster_helper {a b : Fin 4} (h : a.val + 1 = b.val) : (caster a) + 1 = caster b := by
+lemma caster_helper (n : ℕ) {a b : Fin n}
+  (ha : a.val + 1 = b.val) :
+    Fin.succ (a) = caster n b := by
   ext
   -- unfold caster
-  rw [← caster_val, Fin.val_add, ← caster_val, Fin.val_one, h]
+  rw [← caster_val n]
   simp
-  have h' : b.val < 4 := Fin.prop b
-  linarith
-
-
-
-
-
-
-
-
-
-
--- Note (caster n) + 1 ≠ caster (n + 1) since addition in Fin n is modular
-#eval (caster 3) + 1
-#eval caster (3 + 1)
-
+  rw[ha]
 
 
 -- A Coxeter group is defined as a presented group generated by Fin n where n is the side length
 -- of the Coxeter matrix, so a map out of a Coxeter group should hopefully start with a map out of
 -- Fin n. This map sends i ↦ (i, i+1).
-abbrev F : Fin 4 → S₅ := fun n ↦ swap (caster n) ((caster n) + 1)
+
+--It's so unfortunate that we have to define this using n - 1, because
+--it demands we pass in n > 0, but we would need to do that
+--eventually anyway.
+
+lemma hn_helper (n : ℕ) (hn : n > 0) : n - 1 + 1 = n := by omega
+
+abbrev F (n : ℕ) (hn : n > 0) : Fin (n - 1) → Sₙ n :=
+  fun m ↦
+    swap
+      (Fin.cast (hn_helper n hn) (caster (n - 1) m))
+      (Fin.cast (hn_helper n hn) (Fin.succ m))
 
 
-
-lemma F_resp_rels : ∀ r ∈ C₄_matrix.relationsSet, (FreeGroup.lift F) r = 1 := by
+lemma F_resp_rels (n : ℕ) (hn : n > 0) :
+  ∀ r ∈ (Cₙ_matrix (n - 1)).relationsSet, (FreeGroup.lift (F n hn)) r = 1 := by
   intro r hr
-  rw [show C₄_matrix.relationsSet = Set.range (Function.uncurry C₄_matrix.relation) from rfl,
+  rw [show (Cₙ_matrix (n - 1)).relationsSet =
+    Set.range (Function.uncurry (Cₙ_matrix (n - 1)).relation) from rfl,
     Function.uncurry_def,
-    show C₄_matrix.relation = fun i i' ↦ (FreeGroup.of i * FreeGroup.of i') ^ C₄_matrix.M i i' from
-      rfl] at hr
+    show (Cₙ_matrix (n - 1)).relation =
+     fun i i' ↦ (FreeGroup.of i * FreeGroup.of i') ^ (Cₙ_matrix (n - 1)).M i i' from rfl]
+    at hr
   simp at hr
   simp [C] at hr
   obtain ⟨a, b, hab⟩ := hr
-  -- have h' : FreeGroup.of a = swap (caster a) ((caster a) + 1) := by
+  let casted_a := Fin.cast (hn_helper n hn) (caster (n - 1) a)
+  let casted_b := Fin.cast (hn_helper n hn) (caster (n - 1) b)
+  let casted_a_plus_1 := Fin.cast (hn_helper n hn) (Fin.succ a)
+  let casted_b_plus_1 := Fin.cast (hn_helper n hn) (Fin.succ b)
   by_cases h1 : a.val = b.val
   · have h' : a = b := by
       exact Fin.eq_of_val_eq h1
     simp [h1] at hab
     rw [← h'] at hab
     rw [← hab, MonoidHom.map_mul, FreeGroup.lift_apply_of,
-      show F a = swap (caster a) (caster a + 1) from rfl]
-    exact swap_mul_self (caster a) ((caster a) + 1)
+      show F n hn a = swap
+        casted_a
+        casted_a_plus_1
+        from rfl]
+    exact swap_mul_self casted_a casted_a_plus_1
   · by_cases h2 : a.val + 1 = b.val
     · simp [h1, h2] at hab        -- Not sure why h1 is necessary here
       rw [← hab, MonoidHom.map_pow, MonoidHom.map_mul, FreeGroup.lift_apply_of,
         FreeGroup.lift_apply_of]
       unfold F
-      rw [caster_helper h2]
-      have hab2 : caster a ≠ caster b := by
-        unfold caster
+      rw [caster_helper (n - 1) h2]
+      have hab2 : casted_a ≠ casted_b := by
+        unfold casted_a casted_b
         simp
         exact Fin.ne_of_val_ne h1
-      have hbb' : caster b ≠ (caster b) + 1 := by
+      have hbb' : casted_b ≠  casted_b_plus_1 := by
+        apply caster_helper at h2
+        unfold casted_b casted_b_plus_1
+        rw[←h2]
         simp
-      exact adj_swap_ord hab2 hbb'
+        apply Fin.ne_of_val_ne at h1
+        exact h1
+      exact adj_swap_ord n hab2 hbb'
     · by_cases h3 : a.val = b.val + 1
       · simp [h3] at hab        -- whereas here h1 and h2 are not necessary here
         rw [← hab, MonoidHom.map_pow, MonoidHom.map_mul, FreeGroup.lift_apply_of,
         FreeGroup.lift_apply_of]
         unfold F
-        rw[caster_helper h3.symm, swap_comm, swap_comm (caster b) (caster a)]
-        have ha'a : (caster a) + 1 ≠ caster a := by
+        rw[caster_helper (n - 1) h3.symm, swap_comm, swap_comm casted_b casted_a]
+        have ha'a : casted_a_plus_1 ≠ casted_a := by
+          unfold casted_a_plus_1 casted_a
+          rw [Fin.ne_iff_vne]
           simp
-        have hab2 : caster a ≠ caster b := by
+        have hab2 : casted_a ≠ casted_b := by
           simp
           exact Fin.ne_of_val_ne h1
-        exact adj_swap_ord ha'a hab2
+        exact adj_swap_ord n ha'a hab2
       · simp[h1, h2, h3] at hab
         rw [← hab, MonoidHom.map_pow, MonoidHom.map_mul, FreeGroup.lift_apply_of,
           FreeGroup.lift_apply_of]
         unfold F
-        have haa' : caster a ≠ (caster a) + 1 := by simp
-        have hbb' : caster b ≠ (caster b) + 1 := by simp
-        have hab2 : caster a ≠ caster b := by
+        have haa' : casted_a ≠ casted_a_plus_1 :=
+          by unfold casted_a casted_a_plus_1; rw [Fin.ne_iff_vne]; simp
+        have hbb' : casted_b ≠ casted_b_plus_1 :=
+          by unfold casted_b casted_b_plus_1; rw[Fin.ne_iff_vne]; simp
+        have hab2 : casted_a ≠ casted_b := by
           simp
           exact Fin.ne_of_val_ne h1
-        have ha'b' : (caster a) + 1 ≠ (caster b) + 1 := by
+        have ha'b' : casted_a_plus_1 ≠ casted_b_plus_1:= by
+          unfold casted_a_plus_1 casted_b_plus_1
           simp
           exact Fin.ne_of_val_ne h1
-        have hab' : caster a ≠ (caster b) + 1 := by
-          rw [caster_val a, caster_val b, ← Fin.val_add_one_of_lt] at h3
-          exact Fin.ne_of_val_ne h3
-          have hb : (caster b).val < 4 := by simp
-          exact Fin.castSucc_lt_castSucc_iff.mp hb
-        have ha'b : (caster a) + 1 ≠ caster b := by
-          rw [caster_val a, caster_val b, ← Fin.val_add_one_of_lt] at h2
-          exact Fin.ne_of_val_ne h2
-          have ha : (caster a).val < 4 := by simp
-          exact Fin.castSucc_lt_castSucc_iff.mp ha
-        exact disj_swap_ord haa' hbb' hab2 hab' ha'b ha'b'
+        have hab' : casted_a ≠ casted_b_plus_1 := by
+          unfold casted_a casted_b_plus_1
+          rw [caster_val (n-1) a, caster_val (n-1) b] at h3
+          rw [Fin.ne_iff_vne]
+          simp at h3
+          simp
+          exact h3
+        have ha'b : casted_a_plus_1 ≠ casted_b := by
+          unfold casted_a_plus_1 casted_b
+          rw [caster_val (n-1) a, caster_val (n-1) b] at h2
+          rw [Fin.ne_iff_vne]
+          simp at h2
+          simp
+          exact h2
+        exact disj_swap_ord n haa' hbb' hab2 hab' ha'b ha'b'
 
-      -- have hab' : caster a ≠ (caster b) + 1 := by
-      --   rw [caster_val a, caster_val b] at h2
-
-      -- have hc : (caster a) + 1 = caster b := by
-
-      --   apply Nat.eq_sub_of_add_eq at h2
-
-        -- rw[Fin.val_eq_val] at h2
-
-
-
--- The map C₄ → S₅ that will be our isomorphism
-abbrev Phi : C₄ →* S₅ := PresentedGroup.toGroup F_resp_rels
-
-
--- The monoid closure of the collection of adjacent transpositions is all of S₅
-#check Perm.mclosure_swap_castSucc_succ 5
+abbrev Phi (n : ℕ) (hn : n > 0) : Cₙ (n-1) →* Sₙ n := PresentedGroup.toGroup (F_resp_rels n hn )
 
 
 -- Adjacent transpositions are in the image of Phi
-lemma ajd_swap_Phi_img : ∀ (i : Fin 4), ∃ (x : C₄), Phi x = swap (caster i) ((caster i) + 1) := by
+lemma ajd_swap_Phi_img (n : ℕ) (hn : n > 0) :
+  ∀ (i : Fin (n - 1)), ∃ (x : Cₙ (n-1)),
+  Phi n hn x = swap
+    (Fin.cast (hn_helper n hn) (caster (n-1) i))
+    (Fin.cast (hn_helper n hn) (Fin.succ i))
+  := by
   intro i
   use PresentedGroup.of i
   apply PresentedGroup.toGroup.of
-  -- unfold Phi
-  -- apply PresentedGroup.toGroup.of F_resp_rels
 
-
-lemma surj_helper_cast {y : Fin 4} : caster y = y.castSucc := by
-  unfold caster
-  exact Eq.symm (Fin.eq_of_val_eq rfl)
-
-lemma surj_helper_cast_succ {y : Fin 4} : (caster y) + 1 = y.succ := by
-        rw [surj_helper_cast]
-        exact Fin.coeSucc_eq_succ
-
-lemma surj_helper_fun : F = fun (i : Fin 4) ↦ swap i.castSucc i.succ := by
-  ext x
-  unfold F
-  rw [surj_helper_cast_succ, surj_helper_cast]
 
 
 -- The group homomorphism Phi: C₄ → S₅ is surjective
-lemma Phi_surj : Function.Surjective Phi := by
-  have hm : Submonoid.closure (Set.range F) ≤ (Phi.range).toSubmonoid := by
+lemma Phi_surj (n : ℕ) (hn : n > 0) : Function.Surjective (Phi n hn) := by
+  have hm : Submonoid.closure (Set.range (F n hn)) ≤ ((Phi n hn).range).toSubmonoid := by
     rw [Submonoid.closure_le]
     simp
     intro x hx
@@ -392,30 +319,14 @@ lemma Phi_surj : Function.Surjective Phi := by
     simp
     use PresentedGroup.of y
     unfold Phi
-    rw [← hy, ← PresentedGroup.toGroup.of F_resp_rels]
+    rw [← hy, ← PresentedGroup.toGroup.of (F_resp_rels n hn)]
     rfl
-  have hs : (Set.range fun (i : Fin 4) ↦ swap i.castSucc i.succ) = Set.range F := by
-    rw [surj_helper_fun]
-    -- ext x
-    -- constructor
-    -- · simp
-    --   intro y hy
-    --   use y
-    --   rw [show F y = swap (caster y) (caster y + 1) from rfl]
-    --   have hc : caster y = y.castSucc := surj_helper_cast
-    --   have hc' : (caster y) + 1 = y.succ := surj_helper_cast_succ
-    --   rw [← hy, ← hc, ← hc']
-    -- · simp
-    --   intro y hy
-    --   unfold F at hy
-    --   have hc : caster y = y.castSucc := surj_helper_cast
-    --   have hc' : (caster y) + 1 = y.succ := surj_helper_cast_succ
-    --   use y
-    --   rw[← hy, ← hc, ← hc']
-  rw [← hs] at hm
-  rw [Perm.mclosure_swap_castSucc_succ] at hm
-  exact Function.Surjective.of_comp fun b ↦ hm trivial
-  -- rw[← MonoidHom.range_eq_top]
+  have hs : (Set.range fun (i : Fin (n-1)) ↦ swap (Fin.cast (hn_helper n hn) i.castSucc) (Fin.cast (hn_helper n hn) i.succ)) = Set.range (F n hn) := by
+    rfl
+  sorry
+
+
+
 
 
 #check Subgroup.card_dvd_of_surjective
@@ -453,3 +364,7 @@ abbrev cast_3 : Fin 3 → Fin 4 := fun n ↦ Fin.castLE (by decide) n
 abbrev C₃_incl : Fin 3 → S₅ := F ∘ cast_3
 
 abbrev C₃_image : Subgroup S₅ := Subgroup.closure (Set.range C₃_incl)
+
+
+--Assuming we want to use induction, it might be easiest to
+--actually jump right up to the n case
