@@ -308,7 +308,6 @@ lemma ajd_swap_Phi_img (n : ℕ) (hn : n > 0) :
 
 
 
--- The group homomorphism Phi: C₄ → S₅ is surjective
 lemma Phi_surj (n : ℕ) (hn : n > 0) : Function.Surjective (Phi n hn) := by
   have hm : Submonoid.closure (Set.range (F n hn)) ≤ ((Phi n hn).range).toSubmonoid := by
     rw [Submonoid.closure_le]
@@ -321,9 +320,20 @@ lemma Phi_surj (n : ℕ) (hn : n > 0) : Function.Surjective (Phi n hn) := by
     unfold Phi
     rw [← hy, ← PresentedGroup.toGroup.of (F_resp_rels n hn)]
     rfl
-  have hs : (Set.range fun (i : Fin (n-1)) ↦ swap (Fin.cast (hn_helper n hn) i.castSucc) (Fin.cast (hn_helper n hn) i.succ)) = Set.range (F n hn) := by
+  have hs : (Set.range fun (i : Fin (n-1)) ↦ swap
+    (Fin.cast (hn_helper n hn) i.castSucc)
+    (Fin.cast (hn_helper n hn) i.succ)) = Set.range (F n hn)
+  := by
     rfl
-  sorry
+  rw[←hs] at hm
+  --This is weird but it's because of the Fin.cast stuff...
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hn)
+  change
+  Submonoid.closure
+    (Set.range (fun i : Fin k => swap i.castSucc i.succ)) ≤
+  (Phi (k + 1) hn).range.toSubmonoid at hm
+  rw [Perm.mclosure_swap_castSucc_succ] at hm
+  exact Function.Surjective.of_comp fun b ↦ hm trivial
 
 
 
