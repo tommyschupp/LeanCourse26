@@ -73,7 +73,7 @@ lemma free_cast_helper_pow {n : ℕ} (i j : Fin n) : (cox_mat_temp n) i j =
   simp    -- simp might be the goat
 
 
--- DO THIS NEXT:
+
 -- note the exponent is split by a line break
 -- This says the image under free_cast n of the of the relations given by cox_mat n is a relation
 -- given by cox_mat (n + 1).
@@ -144,3 +144,33 @@ lemma free_cast_resp_rels (n : ℕ) :
 -- Inclusion map C_n → C_{n+1} which allows us to use induction to prove size of C_n
 abbrev cox_incl (n : ℕ) : cox_grp n → cox_grp (n+1) :=
   PresentedGroup.map (free_cast n) (free_cast_resp_rels n)
+
+
+-- This instance says that the free group with no generators has only one element
+#check FreeGroup.instUniqueOfIsEmpty
+
+-- Can apply this to show that it is isomorphic to the trivial group
+abbrev empty_free_grp_triv : FreeGroup (Fin 0) ≃* Unit := MulEquiv.ofUnique
+
+lemma empty_free_card : Nat.card (FreeGroup (Fin 0)) = 1 := Nat.card_unique
+
+abbrev triv_cox : CoxeterMatrix (Fin 0) := cox_mat 0
+
+example : cox_grp 0 = PresentedGroup triv_cox.relationsSet := rfl
+
+abbrev triv_quot : FreeGroup (Fin 0) →* cox_grp 0 := PresentedGroup.mk triv_cox.relationsSet
+
+#check Subgroup.card_bot (G := (cox_grp 0))
+#check (Subgroup.card_le_card_group (G := (cox_grp 0)))
+
+
+
+-- This is the base case for the induction that will put a bound on the size of cox_grp n
+lemma triv_cox_card [Group (cox_grp 0)] [Fintype (cox_grp 0)] : Fintype.card (cox_grp 0) = 1 := by
+  -- rw [← empty_free_card]
+  have h : Fintype.card (cox_grp 0) ≤ Fintype.card (FreeGroup (Fin 0)) := by
+    exact Fintype.card_le_of_surjective triv_quot
+      (PresentedGroup.mk_surjective triv_cox.relationsSet)
+  simp at h
+  have h' : Fintype.card (cox_grp 0) ≥ 1 := NeZero.one_le
+  exact Eq.symm (Nat.le_antisymm h' h)
