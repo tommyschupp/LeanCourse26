@@ -1,4 +1,4 @@
-import LeanCourse26.Projects.GroupPresentations.symmetric
+import LeanCourse26.Projects.GroupPresentations.symmetric_5
 
 #click_suggestions
 
@@ -59,6 +59,7 @@ abbrev Cox_mat (n : ℕ) : CoxeterMatrix (Fin n) where
 -- Coxeter group for arbitrary n
 abbrev Cox_grp (n : ℕ) : Type := CoxeterMatrix.Group (Cox_mat n)
 
+#eval Cox_mat_temp 0
 
 -- Want to define function Cox_grp n → Cox_grp n+1, do this using PresentedGroup.map
 -- The definition using "fun n ↦ Fin.castLE (by decide) n" as in symmetric.lean didn't work
@@ -70,6 +71,17 @@ abbrev free_cast (n : ℕ) : FreeGroup (Fin n) →* FreeGroup (Fin (n+1)) := Fre
 lemma free_cast_helper_pow {n : ℕ} (i j : Fin n) : (Cox_mat n) i j =
   (Cox_mat (n+1)) (succ_cast n i) (succ_cast n j) := by
   simp    -- simp might be the goat
+
+
+-- DO THIS NEXT:
+-- note the exponent is split by a line break
+-- This says the image under free_cast n of the of the relations given by Cox_mat n is a relation
+-- given by Cox_mat (n + 1).
+lemma free_cast_helper_2 {n : ℕ} (y : (Fin n) × (Fin n)) :
+  (free_cast n) (FreeGroup.of y.1 * FreeGroup.of y.2) ^ (Cox_mat n).M y.1 y.2 =
+  (FreeGroup.of (succ_cast n y.1) * FreeGroup.of (succ_cast n y.2)) ^
+  (Cox_mat (n+1)).M (succ_cast n y.1) (succ_cast n y.2) := by
+  sorry
 
 
 lemma free_cast_helper_mem {n : ℕ} (y : (Fin n) × (Fin n)) :

@@ -28,10 +28,10 @@ open Nat      -- Necessary to use ! insead of Nat.factorial
 open Equiv    -- Allows us to use swap instead of Equiv.swap to represent transpositions
 
 
-abbrev Sₙ (n : ℕ) : Type := Equiv.Perm (Fin n)
+abbrev sym_grp (n : ℕ) : Type := Equiv.Perm (Fin n)
 
 -- Order of S₅ is 5!
-lemma Sₙ_card (n : ℕ) : Nat.card (Sₙ n) = n ! := by
+lemma sym_grp_card (n : ℕ) : Nat.card (sym_grp n) = n ! := by
   rw [Nat.card_perm, card_fin]
 
 
@@ -158,14 +158,14 @@ lemma C_off_diagonal (n : ℕ) (i j : Fin n) : i ≠ j → C n i j ≠ 1 := by
 
 
 -- The Coxeter matrix defining our group
-abbrev Cₙ_matrix (n : ℕ) : CoxeterMatrix (Fin n) where
+abbrev cox_grp_matrix (n : ℕ) : CoxeterMatrix (Fin n) where
   M := C n
   isSymm := C_is_symm n
   diagonal := C_diagonal n
   off_diagonal := C_off_diagonal n
 
 
-abbrev Cₙ (n : ℕ): Type := CoxeterMatrix.Group (Cₙ_matrix n)
+abbrev cox_grp (n : ℕ): Type := CoxeterMatrix.Group (cox_grp_matrix n)
 
 -- Fin.CastLE converts Fin n to Fin m provided hypothesis that n ≤ m.
 abbrev caster (n : ℕ) : Fin n → Fin (n + 1) := fun m ↦ Fin.castLE (by simp) m
@@ -193,38 +193,38 @@ lemma caster_helper (n : ℕ) {a b : Fin n}
 --it demands we pass in n > 0, but we would need to do that
 --eventually anyway.
 
-lemma hn_helper (n : ℕ) (hn : n > 0) : n - 1 + 1 = n := by omega
+lemma hn_helper {n : ℕ} (hn : n > 0) : n - 1 + 1 = n := by omega
 
-abbrev F (n : ℕ) (hn : n > 0) : Fin (n - 1) → Sₙ n :=
+abbrev F {n : ℕ} (hn : n > 0) : Fin (n - 1) → sym_grp n :=
   fun m ↦
     swap
-      (Fin.cast (hn_helper n hn) (caster (n - 1) m))
-      (Fin.cast (hn_helper n hn) (Fin.succ m))
+      (Fin.cast (hn_helper hn) (caster (n - 1) m))
+      (Fin.cast (hn_helper hn) (Fin.succ m))
 
 
-lemma F_resp_rels (n : ℕ) (hn : n > 0) :
-  ∀ r ∈ (Cₙ_matrix (n - 1)).relationsSet, (FreeGroup.lift (F n hn)) r = 1 := by
+lemma F_resp_rels {n : ℕ} (hn : n > 0) :
+  ∀ r ∈ (cox_grp_matrix (n - 1)).relationsSet, (FreeGroup.lift (F hn)) r = 1 := by
   intro r hr
-  rw [show (Cₙ_matrix (n - 1)).relationsSet =
-    Set.range (Function.uncurry (Cₙ_matrix (n - 1)).relation) from rfl,
+  rw [show (cox_grp_matrix (n - 1)).relationsSet =
+    Set.range (Function.uncurry (cox_grp_matrix (n - 1)).relation) from rfl,
     Function.uncurry_def,
-    show (Cₙ_matrix (n - 1)).relation =
-     fun i i' ↦ (FreeGroup.of i * FreeGroup.of i') ^ (Cₙ_matrix (n - 1)).M i i' from rfl]
+    show (cox_grp_matrix (n - 1)).relation =
+     fun i i' ↦ (FreeGroup.of i * FreeGroup.of i') ^ (cox_grp_matrix (n - 1)).M i i' from rfl]
     at hr
   simp at hr
   simp [C] at hr
   obtain ⟨a, b, hab⟩ := hr
-  let casted_a := Fin.cast (hn_helper n hn) (caster (n - 1) a)
-  let casted_b := Fin.cast (hn_helper n hn) (caster (n - 1) b)
-  let casted_a_plus_1 := Fin.cast (hn_helper n hn) (Fin.succ a)
-  let casted_b_plus_1 := Fin.cast (hn_helper n hn) (Fin.succ b)
+  let casted_a := Fin.cast (hn_helper hn) (caster (n - 1) a)
+  let casted_b := Fin.cast (hn_helper hn) (caster (n - 1) b)
+  let casted_a_plus_1 := Fin.cast (hn_helper hn) (Fin.succ a)
+  let casted_b_plus_1 := Fin.cast (hn_helper hn) (Fin.succ b)
   by_cases h1 : a.val = b.val
   · have h' : a = b := by
       exact Fin.eq_of_val_eq h1
     simp [h1] at hab
     rw [← h'] at hab
     rw [← hab, MonoidHom.map_mul, FreeGroup.lift_apply_of,
-      show F n hn a = swap
+      show F hn a = swap
         casted_a
         casted_a_plus_1
         from rfl]
@@ -292,15 +292,16 @@ lemma F_resp_rels (n : ℕ) (hn : n > 0) :
           exact h2
         exact disj_swap_ord n haa' hbb' hab2 hab' ha'b ha'b'
 
-abbrev Phi (n : ℕ) (hn : n > 0) : Cₙ (n-1) →* Sₙ n := PresentedGroup.toGroup (F_resp_rels n hn )
+abbrev Phi {n : ℕ} (hn : n > 0) : cox_grp (n-1) →* sym_grp n :=
+  PresentedGroup.toGroup (F_resp_rels hn)
 
 
 -- Adjacent transpositions are in the image of Phi
-lemma ajd_swap_Phi_img (n : ℕ) (hn : n > 0) :
-  ∀ (i : Fin (n - 1)), ∃ (x : Cₙ (n-1)),
-  Phi n hn x = swap
-    (Fin.cast (hn_helper n hn) (caster (n-1) i))
-    (Fin.cast (hn_helper n hn) (Fin.succ i))
+lemma ajd_swap_Phi_img {n : ℕ} (hn : n > 0) :
+  ∀ (i : Fin (n - 1)), ∃ (x : cox_grp (n-1)),
+  Phi hn x = swap
+    (Fin.cast (hn_helper hn) (caster (n-1) i))
+    (Fin.cast (hn_helper hn) (Fin.succ i))
   := by
   intro i
   use PresentedGroup.of i
@@ -308,8 +309,8 @@ lemma ajd_swap_Phi_img (n : ℕ) (hn : n > 0) :
 
 
 
-lemma Phi_surj (n : ℕ) (hn : n > 0) : Function.Surjective (Phi n hn) := by
-  have hm : Submonoid.closure (Set.range (F n hn)) ≤ ((Phi n hn).range).toSubmonoid := by
+lemma Phi_surj {n : ℕ} (hn : n > 0) : Function.Surjective (Phi hn) := by
+  have hm : Submonoid.closure (Set.range (F hn)) ≤ ((Phi hn).range).toSubmonoid := by
     rw [Submonoid.closure_le]
     simp
     intro x hx
@@ -318,11 +319,11 @@ lemma Phi_surj (n : ℕ) (hn : n > 0) : Function.Surjective (Phi n hn) := by
     simp
     use PresentedGroup.of y
     unfold Phi
-    rw [← hy, ← PresentedGroup.toGroup.of (F_resp_rels n hn)]
+    rw [← hy, ← PresentedGroup.toGroup.of (F_resp_rels hn)]
     rfl
   have hs : (Set.range fun (i : Fin (n-1)) ↦ swap
-    (Fin.cast (hn_helper n hn) i.castSucc)
-    (Fin.cast (hn_helper n hn) i.succ)) = Set.range (F n hn)
+    (Fin.cast (hn_helper hn) i.castSucc)
+    (Fin.cast (hn_helper hn) i.succ)) = Set.range (F hn)
   := by
     rfl
   rw[←hs] at hm
@@ -331,7 +332,7 @@ lemma Phi_surj (n : ℕ) (hn : n > 0) : Function.Surjective (Phi n hn) := by
   change
   Submonoid.closure
     (Set.range (fun i : Fin k => swap i.castSucc i.succ)) ≤
-  (Phi (k + 1) hn).range.toSubmonoid at hm
+  (Phi hn).range.toSubmonoid at hm
   rw [Perm.mclosure_swap_castSucc_succ] at hm
   exact Function.Surjective.of_comp fun b ↦ hm trivial
 
@@ -364,17 +365,3 @@ noncomputable def fin_grp_surj_equiv {G H : Type} [Group G] [Fintype G] [Group H
   G ≃* H := by
   have hb : Function.Bijective f := fin_grp_surj f hs hgle
   apply MulEquiv.ofBijective f hb
-
-
-
--- Attempting to prove size of C₄ in a way that scales
--- Maybe this will be harder than just doing it
-abbrev cast_3 : Fin 3 → Fin 4 := fun n ↦ Fin.castLE (by decide) n
-
-abbrev C₃_incl : Fin 3 → S₅ := F ∘ cast_3
-
-abbrev C₃_image : Subgroup S₅ := Subgroup.closure (Set.range C₃_incl)
-
-
---Assuming we want to use induction, it might be easiest to
---actually jump right up to the n case
