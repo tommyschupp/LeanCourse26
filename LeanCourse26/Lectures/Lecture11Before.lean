@@ -60,10 +60,12 @@ They both have a coercion to functions. -/
 
 example {M N : Type*} [Monoid M] [Monoid N] (x y : M) (f : M →* N) :
     f (x * y) = f x * f y := by
-  sorry
+  apply MulHomClass.map_mul
 
-example {M N : Type*} [AddMonoid M] [AddMonoid N] (f : M →+ N) : f 0 = 0 :=
-  sorry
+
+example {M N : Type*} [AddMonoid M] [AddMonoid N] (f : M →+ N) : f 0 = 0 := by
+  apply map_zero
+
 
 
 
@@ -104,8 +106,13 @@ example {G : Type*} [AddCommGroup G] (x y z : G) : z + x + (y - z - x) = y := by
 -- Note: abel only works for additive abelian groups, not multiplicative ones.
 example {G : Type*} [CommGroup G] (x y z : G) : z * x * (y * z⁻¹ * x⁻¹) = y := by
   group --makes some progress, but does not solve the goal.
-  sorry
-  -- abel
+  rw [← mul_rotate (z ^ (-1)) (z * x) y, ← mul_assoc, mul_zpow_self, Int.add_left_neg, zpow_zero,
+    one_mul, ← mul_rotate, mul_zpow_self, Int.add_left_neg, zpow_zero]
+  apply one_mul
+
+
+
+
 
 /-
 Group morphisms are exactly monoid morphisms between groups
@@ -138,11 +145,11 @@ This type is automatically coerced to morphisms and functions.
 
 example {G H K : Type*} [Group G] [Group H] [Group K] (f : G ≃* H) (g : H ≃* K) :
     (G ≃* K) := by
-  sorry
+  exact f.trans g
 
 
 example {G H : Type*} [Group G] [Group H] (f : G ≃* H) :
-    f.trans f.symm = MulEquiv.refl G := by exact?
+    f.trans f.symm = MulEquiv.refl G := by exact MulEquiv.self_trans_symm f
 
 
 
@@ -157,14 +164,14 @@ and some closure properties.
 
 example {G : Type*} [Group G] (H : Subgroup G) {x y : G}
     (hx : x ∈ H) (hy : y ∈ H) : x * y ∈ H := by
-  sorry
+  apply mul_mem hx hy
 
 example {G : Type*} [Group G] (H : Subgroup G) : 1 ∈ H := by
-  sorry
+  exact Subgroup.one_mem H
 
 example {G : Type*} [Group G] (H : Subgroup G) {x : G}
     (hx : x ∈ H) : x⁻¹ ∈ H := by
-  sorry
+  exact Subgroup.inv_mem H hx
 
 /-
 In the above example, it is important to understand that
@@ -208,7 +215,7 @@ example {G : Type*} [Group G] (H H' : Subgroup G) : H ⊓ H' ≤ H := inf_le_lef
 
 example {G : Type*} [Group G] (H H' : Subgroup G) :
     (H ⊔ H' : Subgroup G) = Subgroup.closure ((H : Set G) ∪ (H' : Set G)) := by
-  sorry
+  exact Subgroup.sup_eq_closure H H'
 
 
 /-
@@ -260,13 +267,22 @@ variable {G : Type*} [Group G] (H : Subgroup G)
 
 -- The kernel of a group homomorphism is always a normal subgroup.
 -- Exercise: try to state this yourself, and prove it.
-example {G H : Type*} [Group G] [Group H] (f : G →* H) : sorry := by
-  sorry
+example {G H : Type*} [Group G] [Group H] (f : G →* H) : (MonoidHom.ker f).Normal := by
+  constructor
+  intro n hn g
+  rw[f.mem_ker]
+  rw[f.mem_ker] at hn
+  rw [MonoidHom.map_mul_inv, MonoidHom.map_mul, hn, mul_one, mul_inv_cancel]
+
+
 
 -- Any subgroup of an abelian group is a normal subgroup.
 -- Exercise: state and prove this yourself.
-example {G : Type*} [CommGroup G] (H : Subgroup G) : sorry := by
-  sorry
+example {G : Type*} [CommGroup G] (H : Subgroup G) : H.Normal := by
+  constructor
+  intro n hn g
+  rw [mul_inv_cancel_comm]
+  apply hn
 
 
 
@@ -317,8 +333,16 @@ variable (G : Type*) [Group G]
 def Commutator : Subgroup G := Subgroup.closure {g : G | ∃ x y : G, x * y * x⁻¹ * y⁻¹ = g}
 
 open Subgroup in
-local instance : Subgroup.Normal (Commutator G) :=
+local instance : Subgroup.Normal (Commutator G) := by
   sorry
+  --constructor
+  --intro n hn
+  --induction hn using Subgroup.closure_induction with
+  --| mem x hx =>
+  --  obtain ⟨x, y, rfl⟩ := hx
+  --  intro g
+  --  apply mem_closure_of_mem
+  --  sorry
 
 abbrev Abelianization' := G ⧸ Commutator G
 
