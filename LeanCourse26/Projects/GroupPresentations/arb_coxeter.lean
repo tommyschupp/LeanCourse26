@@ -97,7 +97,7 @@ lemma free_cast_helper_pow {n : ℕ} (i j : Fin n) : (cox_mat_temp n) i j =
 --       from rfl]
 
 
--- Need this to create map between Coxeter groups, there has to be an easier way to prove it
+-- Map between Coxeter groups, used for inducting on the size
 lemma free_cast_resp_rels (n : ℕ) :
   Set.MapsTo (free_cast n) (CoxeterMatrix.relationsSet (cox_mat n))
   (CoxeterMatrix.relationsSet (cox_mat (n + 1))) := by
